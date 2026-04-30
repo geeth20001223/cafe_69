@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-@import "tailwindcss";
 
 :root {
   --bg-primary: #0a0a0f;
@@ -19,6 +18,7 @@
   --info: #3b82f6;
   --lunch: #f59e0b;
   --night: #8b5cf6;
+  --border-light: #3a3a4a;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -64,7 +64,9 @@ body {
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: #dc2626; }
 .btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #16a34a; }
 .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .input {
   width: 100%; background: var(--bg-secondary); border: 1px solid var(--border);

@@ -55,10 +55,6 @@ export async function POST(req: NextRequest) {
   }
 
   const sessionType = getCurrentSession();
-  if (sessionType === 'closed') {
-    return NextResponse.json({ error: 'Café is closed. Operating hours: 7AM-4PM (Lunch) and 4PM-12AM (Night)' }, { status: 400 });
-  }
-
   const db = getDb();
   const discount = parseFloat(discount_amount || 0);
 
