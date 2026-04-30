@@ -2,9 +2,6 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-
-## wcdo qmsv nuis jtpd ________password
-
 First, run the development server:
 
 ```bash
