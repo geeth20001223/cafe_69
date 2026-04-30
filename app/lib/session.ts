@@ -1,6 +1,6 @@
 // Sri Lanka Time (UTC+5:30) session logic
 
-export type SessionType = 'lunch' | 'night' | 'closed';
+export type SessionType = 'lunch' | 'night';
 
 /**
  * Get current session based on Sri Lanka time (UTC+5:30)
@@ -19,8 +19,7 @@ export function getCurrentSession(): SessionType {
   const nightEnd = 24 * 60;    // 24:00
 
   if (timeInMinutes >= lunchStart && timeInMinutes < lunchEnd) return 'lunch';
-  if (timeInMinutes >= lunchEnd && timeInMinutes < nightEnd) return 'night';
-  return 'closed';
+  return 'night'; // night covers 16:00 onwards and early morning (before 07:00)
 }
 
 export function getSLTime(): Date {
@@ -54,6 +53,5 @@ export function formatSLDate(date?: Date): string {
 
 export function getSessionLabel(session: SessionType): string {
   if (session === 'lunch') return '🌅 Lunch Session (7:00 AM – 4:00 PM)';
-  if (session === 'night') return '🌙 Night Session (4:00 PM – 12:00 AM)';
-  return '🔒 Closed (12:00 AM – 7:00 AM)';
+  return '🌙 Night Session (4:00 PM – 7:00 AM)';
 }
