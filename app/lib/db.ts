@@ -121,6 +121,14 @@ function initSchema(db: Database.Database) {
     );
   `);
 
+  // Migrate stock_alerts to support restock workflow
+  const migrateCol = (sql: string) => { try { db.exec(sql); } catch { /* already exists */ } };
+  migrateCol(`ALTER TABLE stock_alerts ADD COLUMN status TEXT DEFAULT 'pending'`);
+  migrateCol(`ALTER TABLE stock_alerts ADD COLUMN requested_qty REAL`);
+  migrateCol(`ALTER TABLE stock_alerts ADD COLUMN requested_by INTEGER`);
+  migrateCol(`ALTER TABLE stock_alerts ADD COLUMN approved_by INTEGER`);
+  migrateCol(`ALTER TABLE stock_alerts ADD COLUMN approved_at TEXT`);
+
   // Seed default admin
   const adminExists = db.prepare('SELECT id FROM users WHERE role = ? LIMIT 1').get('admin');
   if (!adminExists) {

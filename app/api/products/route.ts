@@ -39,9 +39,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, category_id, cost_price, selling_price, quantity, unit, low_stock_threshold, description } = body;
 
-  if (!name || cost_price === undefined || selling_price === undefined) {
-    return NextResponse.json({ error: 'Name, cost price, and selling price required' }, { status: 400 });
+  if (!name) {
+    return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
+
+  // Prices are initialized to 0; only Finance Manager can set/change them
+  const cPrice = 0;
+  const sPrice = 0;
 
   const db = getDb();
   const result = db.prepare(`
@@ -50,8 +54,8 @@ export async function POST(req: NextRequest) {
   `).run(
     name,
     category_id || null,
-    parseFloat(cost_price),
-    parseFloat(selling_price),
+    cPrice,
+    sPrice,
     parseFloat(quantity || 0),
     unit || 'pcs',
     parseFloat(low_stock_threshold || 10),

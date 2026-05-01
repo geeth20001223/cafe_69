@@ -56,6 +56,16 @@ export async function POST(req: NextRequest) {
 
   const sessionType = getCurrentSession();
   const db = getDb();
+  
+  // ── Auto-Report Check ──────────────────────────────────────────────────────
+  // If we are starting a new session/day, check if the previous one was reported
+  try {
+    const { checkAndAutoReport } = await import('@/app/lib/auto-reporter');
+    await checkAndAutoReport();
+  } catch (err) {
+    console.error('[Sales API] Auto-report check failed', err);
+  }
+
   const discount = parseFloat(discount_amount || 0);
 
   // Calculate total

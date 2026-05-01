@@ -12,7 +12,7 @@ export default function ProductsPage() {
   const [filterStatus, setFilterStatus] = useState('active');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: '', category_id: '', cost_price: '', selling_price: '', quantity: '', unit: 'pcs', low_stock_threshold: '10', description: '' });
+  const [form, setForm] = useState({ name: '', category_id: '', quantity: '', unit: 'pcs', low_stock_threshold: '10', description: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,12 +32,12 @@ export default function ProductsPage() {
 
   function openAdd() {
     setEditing(null);
-    setForm({ name: '', category_id: '', cost_price: '', selling_price: '', quantity: '', unit: 'pcs', low_stock_threshold: '10', description: '' });
+    setForm({ name: '', category_id: '', quantity: '', unit: 'pcs', low_stock_threshold: '10', description: '' });
     setError(''); setShowModal(true);
   }
   function openEdit(p: Product) {
     setEditing(p);
-    setForm({ name: p.name, category_id: String(p.category_id || ''), cost_price: String(p.cost_price), selling_price: String(p.selling_price), quantity: String(p.quantity), unit: p.unit, low_stock_threshold: String(p.low_stock_threshold), description: p.description || '' });
+    setForm({ name: p.name, category_id: String(p.category_id || ''), quantity: String(p.quantity), unit: p.unit, low_stock_threshold: String(p.low_stock_threshold), description: p.description || '' });
     setError(''); setShowModal(true);
   }
 
@@ -51,8 +51,6 @@ export default function ProductsPage() {
     e.preventDefault(); setSaving(true); setError('');
     const payload = {
       name: form.name, category_id: form.category_id || null,
-      cost_price: parseQty(form.cost_price),
-      selling_price: parseQty(form.selling_price),
       quantity: parseQty(form.quantity),
       unit: form.unit,
       low_stock_threshold: parseQty(form.low_stock_threshold),
@@ -94,7 +92,7 @@ export default function ProductsPage() {
 
       <div className="card table-wrap">
         <table>
-          <thead><tr><th>Product</th><th>Category</th><th>Cost (LKR)</th><th>Price (LKR)</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             {products.map(p => {
               const pct = p.low_stock_threshold > 0 ? Math.min(100, (p.quantity / p.low_stock_threshold) * 50) : 100;
@@ -106,8 +104,6 @@ export default function ProductsPage() {
                     {p.description && <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{p.description}</div>}
                   </td>
                   <td style={{ color: 'var(--text-secondary)' }}>{p.category_name || '—'}</td>
-                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{p.cost_price.toFixed(2)}</td>
-                  <td style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--success)' }}>{p.selling_price.toFixed(2)}</td>
                   <td style={{ minWidth: 120 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                       <span style={{ color: isLow ? 'var(--danger)' : 'var(--text-primary)', fontSize: '.875rem', fontWeight: isLow ? 700 : 400 }}>
@@ -128,7 +124,7 @@ export default function ProductsPage() {
                 </tr>
               );
             })}
-            {!products.length && <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No products found</td></tr>}
+            {!products.length && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No products found</td></tr>}
           </tbody>
         </table>
       </div>
@@ -156,14 +152,6 @@ export default function ProductsPage() {
                   <select className="input" value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}>
                     {['pcs', 'kg', 'g', 'L', 'ml', 'cup', 'plate', 'bottle', 'pack'].map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '.3rem' }}>Cost Price (LKR) *</label>
-                  <input className="input" value={form.cost_price} onChange={e => setForm({ ...form, cost_price: e.target.value })} placeholder="0.00" required />
-                </div>
-                <div>
-                  <label style={{ fontSize: '.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '.3rem' }}>Selling Price (LKR) *</label>
-                  <input className="input" value={form.selling_price} onChange={e => setForm({ ...form, selling_price: e.target.value })} placeholder="0.00" required />
                 </div>
                 <div>
                   <label style={{ fontSize: '.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '.3rem' }}>Quantity</label>

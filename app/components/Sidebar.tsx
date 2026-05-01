@@ -10,17 +10,14 @@ const navByRole: Record<string, NavItem[]> = {
   admin: [
     { label: 'Dashboard', href: '/dashboard/admin', icon: '🏠' },
     { label: 'User Management', href: '/dashboard/admin/users', icon: '👥' },
-    { label: 'Products', href: '/dashboard/inventory/products', icon: '🍽️' },
-    { label: 'Categories', href: '/dashboard/inventory/categories', icon: '🏷️' },
     { label: 'Inventory', href: '/dashboard/inventory', icon: '📦' },
     { label: 'Sales', href: '/dashboard/cashier', icon: '🛒' },
     { label: 'Finance', href: '/dashboard/finance', icon: '💰' },
   ],
   inventory_manager: [
     { label: 'Dashboard', href: '/dashboard/inventory', icon: '🏠' },
-    { label: 'Products', href: '/dashboard/inventory/products', icon: '🍽️' },
-    { label: 'Categories', href: '/dashboard/inventory/categories', icon: '🏷️' },
     { label: 'Stock Alerts', href: '/dashboard/inventory/alerts', icon: '🔔' },
+    { label: 'Restock Dashboard', href: '/dashboard/restock', icon: '🔁' },
     { label: 'Reports', href: '/dashboard/inventory/reports', icon: '📊' },
     { label: 'Quotations', href: '/dashboard/inventory/quotations', icon: '📋' },
   ],
@@ -30,7 +27,6 @@ const navByRole: Record<string, NavItem[]> = {
   ],
   finance_manager: [
     { label: 'Dashboard', href: '/dashboard/finance', icon: '🏠' },
-    { label: 'Price Management', href: '/dashboard/finance/prices', icon: '💲' },
     { label: 'Sales Reports', href: '/dashboard/finance/reports', icon: '📊' },
     { label: 'Quotations', href: '/dashboard/finance/quotations', icon: '📋' },
     { label: 'Session Reports', href: '/dashboard/finance/sessions', icon: '🕐' },
@@ -76,17 +72,36 @@ export default function Sidebar({ role, name }: SidebarProps) {
       <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.75rem', justifyContent: collapsed ? 'center' : 'flex-start' }}>
         <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>☕</span>
         {!collapsed && <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent)' }}>Cafe 69</span>}
-        <button onClick={() => setCollapsed(!collapsed)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem', display: collapsed ? 'none' : 'block' }}>☰</button>
+        <button 
+          onClick={() => setCollapsed(!collapsed)} 
+          style={{ 
+            marginLeft: collapsed ? '0' : 'auto', 
+            background: 'none', 
+            border: 'none', 
+            color: 'var(--text-muted)', 
+            cursor: 'pointer', 
+            fontSize: '1.2rem',
+            padding: '.25rem',
+            display: 'block' 
+          }}
+          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {collapsed ? '▶' : '☰'}
+        </button>
       </div>
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '.75rem .5rem', display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
-        {nav.map(item => (
-          <Link key={item.href} href={item.href} className={`sidebar-link ${pathname === item.href || pathname.startsWith(item.href + '/') ? 'active' : ''}`}>
-            <span style={{ fontSize: '1rem', flexShrink: 0 }}>{item.icon}</span>
-            {!collapsed && <span>{item.label}</span>}
-          </Link>
-        ))}
+        {nav.map((item, idx) => {
+          const isRoot = item.href === `/dashboard/${role}`;
+          const isActive = pathname === item.href || (!isRoot && pathname.startsWith(item.href + '/'));
+          return (
+            <Link key={item.href} href={item.href} className={`sidebar-link ${isActive ? 'active' : ''} fade-in stagger-${(idx % 4) + 1}`}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>{item.icon}</span>
+              {!collapsed && <span>{item.label}</span>}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* User */}

@@ -19,6 +19,8 @@ export default function CashierPOS() {
   const [lastBill, setLastBill] = useState<any>(null);
   const [error, setError] = useState('');
   const [sessionReport, setSessionReport] = useState<any>(null);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [emailNote, setEmailNote] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
   const loadProducts = useCallback(async () => {
@@ -57,6 +59,22 @@ export default function CashierPOS() {
   const discountAmt = parseFloat(discount) || 0;
   const total = Math.max(0, subtotal - discountAmt);
   const change = payment === 'cash' ? (parseFloat(cashGiven) || 0) - total : 0;
+
+  // Grouping products by category for the POS grid
+  const categoriesMap = new Map<string, Product[]>();
+  const uncategorized: Product[] = [];
+  
+  products.forEach(p => {
+    if (!p.category_name) {
+      uncategorized.push(p);
+    } else {
+      if (!categoriesMap.has(p.category_name)) categoriesMap.set(p.category_name, []);
+      categoriesMap.get(p.category_name)!.push(p);
+    }
+  });
+
+  const sortedCategories = Array.from(categoriesMap.keys()).sort();
+  if (uncategorized.length > 0) sortedCategories.push('Uncategorized');
 
   async function checkout() {
     if (!cart.length) { setError('Cart is empty'); return; }
@@ -112,17 +130,56 @@ export default function CashierPOS() {
   }
 
   async function closeSession() {
+    if (!window.confirm('Are you sure you want to close this session and send reports to Finance?')) return;
+    
     const now = new Date();
     const sessionType = now.getHours() >= 7 && now.getHours() < 16 ? 'lunch' : 'night';
     const today = now.toISOString().split('T')[0];
+    
+    setSubmitting(true);
+    setEmailStatus('sending');
+    setEmailNote('Preparing Sales & Inventory reports...');
+
     const res = await fetch(`/api/sales?from=${today}&to=${today}&session=${sessionType}`);
-    if (!res.ok) return;
+    if (!res.ok) { setSubmitting(false); setEmailStatus('failed'); return; }
+    
     const { sales } = await res.json();
     const totalRevenue = sales.reduce((s: number, s2: any) => s + s2.total_amount, 0);
     const totalTx = sales.length;
     const cashSales = sales.filter((s: any) => s.payment_method === 'cash').reduce((s: number, s2: any) => s + s2.total_amount, 0);
     const cardSales = sales.filter((s: any) => s.payment_method === 'card').reduce((s: number, s2: any) => s + s2.total_amount, 0);
-    setSessionReport({ sessionType, date: today, totalRevenue, totalTx, cashSales, cardSales, sales, generated: now.toLocaleString('en-LK') });
+    const totalDiscount = sales.reduce((s: number, s2: any) => s + (s2.discount_amount || 0), 0);
+    
+    const report = { sessionType, date: today, totalRevenue, totalTx, cashSales, cardSales, totalDiscount, sales, generated: now.toLocaleString('en-LK') };
+    setSessionReport(report);
+
+    try {
+      // 1. Send Sales Report
+      const emailRes = await fetch('/api/session-close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(report),
+      });
+      
+      if (!emailRes.ok) {
+        throw new Error(`Server returned error ${emailRes.status}`);
+      }
+      
+      const emailData = await emailRes.json();
+      
+      if (emailData.emailSent) {
+        setEmailStatus('sent');
+        setEmailNote('Combined Sales & Inventory reports sent successfully');
+      } else {
+        setEmailStatus('failed');
+        setEmailNote(emailData.error || 'Failed to send reports');
+      }
+    } catch (e: any) {
+      setEmailStatus('failed');
+      setEmailNote(e.message || 'Network error');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function printSessionReport(r: any) {
@@ -174,23 +231,45 @@ export default function CashierPOS() {
         </div>
 
         <div style={{ overflowY: 'auto', flex: 1 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: '.75rem' }}>
-            {products.map(p => (
-              <button key={p.id} onClick={() => addToCart(p)} disabled={p.quantity <= 0}
-                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', textAlign: 'left', cursor: p.quantity <= 0 ? 'not-allowed' : 'pointer', opacity: p.quantity <= 0 ? 0.4 : 1, transition: 'all 0.15s' }}
-                onMouseEnter={e => { if (p.quantity > 0) (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '.4rem' }}>🍽️</div>
-                <div style={{ fontWeight: 600, fontSize: '.85rem', color: 'var(--text-primary)', marginBottom: '.2rem' }}>{p.name}</div>
-                <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.4rem' }}>{p.category_name}</div>
-                <div style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}>LKR {p.selling_price.toFixed(2)}</div>
-                <div style={{ fontSize: '.7rem', color: p.quantity <= 5 ? 'var(--danger)' : 'var(--text-muted)', marginTop: '.2rem' }}>
-                  Stock: {p.quantity} {p.unit}
+          {!products.length ? (
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No products found</div>
+          ) : (
+            sortedCategories.map((cat, catIdx) => {
+              const catProducts = cat === 'Uncategorized' ? uncategorized : categoriesMap.get(cat)!;
+              if (catProducts.length === 0) return null;
+              
+              return (
+                <div key={cat} className={`fade-in stagger-${(catIdx % 4) + 1}`} style={{ marginBottom: '1.5rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '.25rem' }}>
+                    {cat}
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: '.75rem' }}>
+                    {catProducts.map((p, pIdx) => (
+                      <button key={p.id} onClick={() => addToCart(p)} disabled={p.quantity <= 0}
+                        className={`fade-in stagger-${((pIdx + catIdx) % 4) + 1}`}
+                        style={{ 
+                          background: 'var(--bg-card)', border: '1px solid var(--border)', 
+                          borderRadius: '10px', padding: '1rem', textAlign: 'left', 
+                          cursor: p.quantity <= 0 ? 'not-allowed' : 'pointer', 
+                          opacity: p.quantity <= 0 ? 0.4 : 1, transition: 'all 0.2s',
+                          position: 'relative', overflow: 'hidden'
+                        }}
+                        onMouseEnter={e => { if (p.quantity > 0) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                        <div style={{ fontSize: '1.5rem', marginBottom: '.4rem' }}>🍽️</div>
+                        <div style={{ fontWeight: 600, fontSize: '.85rem', color: 'var(--text-primary)', marginBottom: '.2rem' }}>{p.name}</div>
+                        <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.4rem' }}>{p.category_name}</div>
+                        <div style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}>LKR {p.selling_price.toFixed(2)}</div>
+                        <div style={{ fontSize: '.7rem', color: p.quantity <= 5 ? 'var(--danger)' : 'var(--text-muted)', marginTop: '.2rem' }}>
+                          Stock: {p.quantity} {p.unit}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </button>
-            ))}
-            {!products.length && <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No products found</div>}
-          </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -322,9 +401,29 @@ export default function CashierPOS() {
             )}
             {!sessionReport.sales.length && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>No sales in this session</div>}
 
-            <div style={{ display: 'flex', gap: '.75rem', marginTop: '.5rem' }}>
-              <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setSessionReport(null)}>Close</button>
-              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printSessionReport(sessionReport)}>🖨️ Print Report</button>
+            <div style={{ display: 'flex', gap: '.75rem', marginTop: '.5rem', flexDirection: 'column' }}>
+              {/* Email status banner */}
+              {emailStatus !== 'idle' && (
+                <div style={{
+                  padding: '.6rem 1rem', borderRadius: '8px', fontSize: '.82rem', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: '.5rem',
+                  background: emailStatus === 'sent' ? 'rgba(34,197,94,0.12)' : emailStatus === 'failed' ? 'rgba(239,68,68,0.12)' : 'rgba(99,102,241,0.12)',
+                  border: `1px solid ${emailStatus === 'sent' ? 'rgba(34,197,94,0.3)' : emailStatus === 'failed' ? 'rgba(239,68,68,0.3)' : 'rgba(99,102,241,0.3)'}`,
+                  color: emailStatus === 'sent' ? '#4ade80' : emailStatus === 'failed' ? '#f87171' : '#818cf8',
+                }}>
+                  <span style={{ fontSize: '1rem' }}>
+                    {emailStatus === 'sending' ? '⏳' : emailStatus === 'sent' ? '✅' : '⚠️'}
+                  </span>
+                  <div>
+                    <div>{emailStatus === 'sending' ? 'Sending report to Finance Manager…' : emailStatus === 'sent' ? 'Report emailed to Finance Manager' : 'Email not sent — ' + emailNote}</div>
+                    {emailStatus === 'sent' && emailNote && <div style={{ fontSize: '.75rem', opacity: 0.8, marginTop: '.1rem' }}>{emailNote}</div>}
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '.75rem' }}>
+                <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { setSessionReport(null); setEmailStatus('idle'); }}>Close</button>
+                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printSessionReport(sessionReport)}>🖨️ Print Report</button>
+              </div>
             </div>
           </div>
         </div>

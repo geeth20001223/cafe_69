@@ -27,10 +27,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const body = await req.json();
   const db = getDb();
 
-  // Finance manager can only update prices; others have full access
-  const allowed = session.role === 'finance_manager'
-    ? ['cost_price', 'selling_price']
-    : ['name', 'category_id', 'cost_price', 'selling_price', 'quantity', 'unit', 'low_stock_threshold', 'status', 'description'];
+  // Field permissions based on role
+  let allowed: string[] = [];
+  if (session.role === 'admin') {
+    allowed = ['name', 'category_id', 'quantity', 'unit', 'low_stock_threshold', 'status', 'description', 'cost_price', 'selling_price'];
+  } else if (session.role === 'finance_manager') {
+    allowed = ['cost_price', 'selling_price'];
+  } else if (session.role === 'inventory_manager') {
+    allowed = ['name', 'category_id', 'quantity', 'unit', 'low_stock_threshold', 'status', 'description'];
+  }
 
   const fields: string[] = [];
   const vals: any[] = [];

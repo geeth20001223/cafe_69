@@ -96,7 +96,7 @@ export default function SalesHistoryPage() {
         <button className="btn btn-secondary" onClick={printAllSales}>🖨️ Print Report</button>
       </div>
 
-      <div className="card" style={{ marginBottom: '1rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="card fade-in stagger-1" style={{ marginBottom: '1rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <input className="input" type="date" style={{ flex: '0 0 150px' }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
         <span style={{ color: 'var(--text-muted)' }}>to</span>
         <input className="input" type="date" style={{ flex: '0 0 150px' }} value={dateTo} onChange={e => setDateTo(e.target.value)} />
@@ -110,23 +110,36 @@ export default function SalesHistoryPage() {
         </div>
       </div>
 
-      <div className="card table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>Session</th><th>Customer</th><th>Payment</th><th>Items</th><th>Total (LKR)</th><th>Time</th><th></th></tr></thead>
-          <tbody>
+      <div className="card table-wrap fade-in stagger-2">
+        <table style={{ borderCollapse: 'separate', borderSpacing: '0 .25rem' }}>
+          <thead>
+            <tr>
+              <th style={{ width: '8%' }}>#</th>
+              <th style={{ width: '12%' }}>Session</th>
+              <th style={{ width: '25%' }}>Customer</th>
+              <th style={{ width: '12%' }}>Payment</th>
+              <th style={{ width: '10%' }}>Items</th>
+              <th style={{ width: '15%', textAlign: 'right' }}>Total (LKR)</th>
+              <th style={{ width: '10%' }}>Time</th>
+              <th style={{ width: '8%', textAlign: 'right' }}></th>
+            </tr>
+          </thead>
+          <tbody style={{ verticalAlign: 'middle' }}>
             {sales.map(s => (
               <tr key={s.id}>
-                <td style={{ color: 'var(--text-muted)' }}>#{s.id}</td>
+                <td style={{ color: 'var(--text-muted)', fontWeight: 600 }}>#{s.id}</td>
                 <td><span className={`badge badge-${s.session_type}`}>{s.session_type}</span></td>
-                <td style={{ color: 'var(--text-secondary)' }}>{s.customer_name || '—'}</td>
+                <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.customer_name || '—'}</td>
                 <td><span className="badge badge-pending">{s.payment_method}</span></td>
-                <td style={{ color: 'var(--text-muted)' }}>{s.item_count}</td>
-                <td style={{ fontWeight: 700, color: 'var(--success)' }}>{s.total_amount.toFixed(2)}</td>
+                <td style={{ color: 'var(--text-muted)' }}>{s.item_count} items</td>
+                <td style={{ fontWeight: 700, color: 'var(--success)', textAlign: 'right' }}>{s.total_amount.toFixed(2)}</td>
                 <td style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{s.created_at?.slice(11, 16)}</td>
-                <td><button className="btn btn-secondary btn-sm" onClick={() => viewDetail(s.id)}>View</button></td>
+                <td style={{ textAlign: 'right' }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => viewDetail(s.id)}>View</button>
+                </td>
               </tr>
             ))}
-            {!sales.length && <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No sales found</td></tr>}
+            {!sales.length && <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No sales found</td></tr>}
           </tbody>
         </table>
       </div>

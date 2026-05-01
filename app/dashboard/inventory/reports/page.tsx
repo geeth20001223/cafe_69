@@ -6,6 +6,8 @@ export default function InventoryReportsPage() {
   const [generating, setGenerating] = useState(false);
   const [detail, setDetail] = useState<any>(null);
   const [title, setTitle] = useState('');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sent' | 'failed'>('idle');
+  const [emailNote, setEmailNote] = useState('');
 
   const load = async () => {
     const res = await fetch('/api/reports?type=inventory');
@@ -15,8 +17,20 @@ export default function InventoryReportsPage() {
 
   async function generate() {
     setGenerating(true);
+    setEmailStatus('idle');
     const res = await fetch('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title || undefined }) });
-    if (res.ok) { const d = await res.json(); setDetail(d.data); load(); }
+    if (res.ok) { 
+      const d = await res.json(); 
+      setDetail(d.data); 
+      if (d.emailSent) {
+        setEmailStatus('sent');
+        setEmailNote(`Emailed to ${d.sentTo?.join(', ') || 'Finance Manager'}`);
+      } else {
+        setEmailStatus('failed');
+        setEmailNote(d.emailReason || 'Failed to send email');
+      }
+      load(); 
+    }
     setGenerating(false);
   }
 
@@ -33,7 +47,11 @@ export default function InventoryReportsPage() {
       {detail && (
         <div className="card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--accent)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '.5rem' }}>
-            <h2 style={{ fontWeight: 600 }}>Latest Snapshot</h2>
+            <div>
+              <h2 style={{ fontWeight: 600 }}>Latest Snapshot</h2>
+              {emailStatus === 'sent' && <div style={{ fontSize: '.8rem', color: 'var(--success)', marginTop: '.25rem' }}>✅ {emailNote}</div>}
+              {emailStatus === 'failed' && <div style={{ fontSize: '.8rem', color: 'var(--danger)', marginTop: '.25rem' }}>⚠️ Email not sent: {emailNote}</div>}
+            </div>
             <div style={{ display: 'flex', gap: '1.5rem' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--info)' }}>{detail.summary?.total_products}</div>

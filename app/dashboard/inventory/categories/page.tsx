@@ -10,7 +10,7 @@ interface Product {
 
 const UNITS = ['pcs', 'kg', 'g', 'L', 'ml', 'cup', 'plate', 'bottle', 'pack'];
 
-const emptyProduct = { name: '', category_id: '', cost_price: '', selling_price: '', quantity: '', unit: 'pcs', low_stock_threshold: '10', description: '' };
+const emptyProduct = { name: '', category_id: '', quantity: '', unit: 'pcs', low_stock_threshold: '10', description: '' };
 
 export default function CategoriesPage() {
   const [cats, setCats] = useState<Category[]>([]);
@@ -104,7 +104,6 @@ export default function CategoriesPage() {
     setTargetCatId(p.category_id);
     setProdForm({
       name: p.name, category_id: String(p.category_id || ''),
-      cost_price: String(p.cost_price), selling_price: String(p.selling_price),
       quantity: String(p.quantity), unit: p.unit,
       low_stock_threshold: String(p.low_stock_threshold), description: p.description || '',
     });
@@ -115,8 +114,6 @@ export default function CategoriesPage() {
     const payload = {
       name: prodForm.name,
       category_id: prodForm.category_id || null,
-      cost_price: parseFloat(prodForm.cost_price) || 0,
-      selling_price: parseFloat(prodForm.selling_price) || 0,
       quantity: parseFloat(prodForm.quantity) || 0,
       unit: prodForm.unit,
       low_stock_threshold: parseFloat(prodForm.low_stock_threshold) || 10,
@@ -210,8 +207,6 @@ export default function CategoriesPage() {
                         <thead>
                           <tr>
                             <th style={{ padding: '.6rem 1.25rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Product</th>
-                            <th style={{ padding: '.6rem 1rem', textAlign: 'right', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Cost (LKR)</th>
-                            <th style={{ padding: '.6rem 1rem', textAlign: 'right', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Price (LKR)</th>
                             <th style={{ padding: '.6rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Stock</th>
                             <th style={{ padding: '.6rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Actions</th>
                           </tr>
@@ -225,8 +220,6 @@ export default function CategoriesPage() {
                                   <div style={{ fontWeight: 500 }}>{p.name}</div>
                                   {p.description && <div style={{ fontSize: '.72rem', color: 'var(--text-muted)' }}>{p.description}</div>}
                                 </td>
-                                <td style={{ padding: '.6rem 1rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--text-secondary)' }}>{p.cost_price.toFixed(2)}</td>
-                                <td style={{ padding: '.6rem 1rem', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--success)', fontWeight: 600 }}>{p.selling_price.toFixed(2)}</td>
                                 <td style={{ padding: '.6rem 1rem', textAlign: 'center' }}>
                                   <span style={{ color: isLow ? 'var(--danger)' : 'var(--text-primary)', fontWeight: isLow ? 700 : 400, fontSize: '.85rem' }}>
                                     {p.quantity} {p.unit}
@@ -276,7 +269,6 @@ export default function CategoriesPage() {
                   <thead>
                     <tr>
                       <th style={{ padding: '.6rem 1.25rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Product</th>
-                      <th style={{ padding: '.6rem 1rem', textAlign: 'right', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Price (LKR)</th>
                       <th style={{ padding: '.6rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Stock</th>
                       <th style={{ padding: '.6rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Actions</th>
                     </tr>
@@ -285,7 +277,6 @@ export default function CategoriesPage() {
                     {uncategorised().map((p, idx) => (
                       <tr key={p.id} style={{ background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,.015)' }}>
                         <td style={{ padding: '.6rem 1.25rem', fontWeight: 500 }}>{p.name}</td>
-                        <td style={{ padding: '.6rem 1rem', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{p.selling_price.toFixed(2)}</td>
                         <td style={{ padding: '.6rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>{p.quantity} {p.unit}</td>
                         <td style={{ padding: '.6rem 1rem', textAlign: 'center' }}>
                           <button className="btn btn-secondary btn-sm" onClick={e => openEditProduct(p, e)}>✏️ Assign Category</button>
@@ -357,14 +348,6 @@ export default function CategoriesPage() {
                   {inputLabel('Low Stock Alert At')}
                   <input className="input" type="number" min="0" step="1" value={prodForm.low_stock_threshold} onChange={e => setProdForm({ ...prodForm, low_stock_threshold: e.target.value })} placeholder="10" />
                 </div>
-                <div>
-                  {inputLabel('Cost Price (LKR) *')}
-                  <input className="input" type="number" min="0" step="0.01" value={prodForm.cost_price} onChange={e => setProdForm({ ...prodForm, cost_price: e.target.value })} placeholder="0.00" required />
-                </div>
-                <div>
-                  {inputLabel('Selling Price (LKR) *')}
-                  <input className="input" type="number" min="0" step="0.01" value={prodForm.selling_price} onChange={e => setProdForm({ ...prodForm, selling_price: e.target.value })} placeholder="0.00" required />
-                </div>
                 <div style={{ gridColumn: '1/-1' }}>
                   {inputLabel('Initial Stock Quantity')}
                   <input className="input" type="number" min="0" step="0.5" value={prodForm.quantity} onChange={e => setProdForm({ ...prodForm, quantity: e.target.value })} placeholder="0" />
@@ -374,16 +357,9 @@ export default function CategoriesPage() {
                   <input className="input" value={prodForm.description} onChange={e => setProdForm({ ...prodForm, description: e.target.value })} placeholder="Short description" />
                 </div>
               </div>
-              {/* Live margin preview */}
-              {prodForm.cost_price && prodForm.selling_price && (
-                <div style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '.6rem 1rem', fontSize: '.82rem', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Profit margin</span>
-                  <span style={{ fontWeight: 700, color: parseFloat(prodForm.selling_price) > parseFloat(prodForm.cost_price) ? 'var(--success)' : 'var(--danger)' }}>
-                    LKR {(parseFloat(prodForm.selling_price) - parseFloat(prodForm.cost_price)).toFixed(2)} &nbsp;
-                    ({(((parseFloat(prodForm.selling_price) - parseFloat(prodForm.cost_price)) / (parseFloat(prodForm.cost_price) || 1)) * 100).toFixed(1)}%)
-                  </span>
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '.6rem 1rem', fontSize: '.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  💡 Prices are managed by the Finance department.
                 </div>
-              )}
               <div style={{ display: 'flex', gap: '.75rem', marginTop: '.5rem' }}>
                 <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowProdModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={prodSaving}>{prodSaving ? 'Saving…' : editingProd ? 'Update Product' : 'Add Product'}</button>

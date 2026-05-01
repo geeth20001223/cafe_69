@@ -137,8 +137,8 @@ export default function AdminDashboardClient() {
           { label: 'Active Products', value: loading ? '…' : stats.productsCount, sub: 'in inventory', icon: '📦', color: '#3b82f6' },
           { label: 'Stock Alerts', value: loading ? '…' : stats.alertsCount, sub: 'unread alerts', icon: '🔔', color: stats.alertsCount > 0 ? '#ef4444' : '#64748b' },
           { label: 'Active Users', value: loading ? '…' : activeUsers.length, sub: 'across all roles', icon: '👥', color: '#f59e0b' },
-        ].map(stat => (
-          <div key={stat.label} className="stat-card">
+        ].map((stat, idx) => (
+          <div key={stat.label} className={`stat-card fade-in stagger-${idx + 1}`}>
             <div style={{ fontSize: '1.5rem', marginBottom: '.5rem' }}>{stat.icon}</div>
             <div style={{ fontSize: '1.6rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
             <div style={{ fontSize: '.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '.1rem' }}>{stat.label}</div>
@@ -148,7 +148,7 @@ export default function AdminDashboardClient() {
       </div>
 
       {/* Role breakdown */}
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
+      <div className="card fade-in stagger-3" style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontWeight: 600, marginBottom: '1rem' }}>Active Users by Role</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: '.75rem' }}>
           {usersByRole.map(({ role, cnt }) => (
@@ -162,7 +162,7 @@ export default function AdminDashboardClient() {
       </div>
 
       {/* Full user table */}
-      <div className="card">
+      <div className="card fade-in stagger-4">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '.75rem' }}>
           <h2 style={{ fontWeight: 600 }}>All Users <span style={{ fontSize: '.8rem', color: 'var(--text-muted)', fontWeight: 400 }}>({users.length})</span></h2>
           <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
@@ -175,40 +175,45 @@ export default function AdminDashboardClient() {
         </div>
 
         <div className="table-wrap">
-          <table>
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 .5rem' }}>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th style={{ width: '25%' }}>Name</th>
+                <th style={{ width: '25%' }}>Email</th>
+                <th style={{ width: '15%' }}>Role</th>
+                <th style={{ width: '12%' }}>Status</th>
+                <th style={{ width: '10%' }}>Created</th>
+                <th style={{ width: '13%', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody style={{ verticalAlign: 'middle' }}>
               {loading && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Loading…</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2.5rem' }}>Loading…</td></tr>
               )}
               {!loading && filtered.map(u => (
-                <tr key={u.id}>
-                  <td style={{ fontWeight: 500 }}>{u.name}</td>
+                <tr key={u.id} className="fade-in" style={{ transition: 'background 0.2s' }}>
+                  <td style={{ fontWeight: 600, padding: '1rem' }}>{u.name}</td>
                   <td style={{ color: 'var(--text-secondary)', fontSize: '.85rem' }}>{u.email}</td>
                   <td>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', background: 'var(--bg-hover)', padding: '.2rem .6rem', borderRadius: '6px', fontSize: '.78rem', fontWeight: 600 }}>
+                    <span style={{ 
+                      display: 'inline-flex', alignItems: 'center', gap: '.4rem', 
+                      background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
+                      padding: '.3rem .75rem', borderRadius: '8px', fontSize: '.75rem', fontWeight: 700,
+                      whiteSpace: 'nowrap'
+                    }}>
                       {ROLE_ICONS[u.role]} {ROLE_LABELS[u.role] || u.role}
                     </span>
                   </td>
                   <td>
-                    <span className={`badge ${u.is_active ? 'badge-active' : 'badge-inactive'}`}>
+                    <span className={`badge ${u.is_active ? 'badge-active' : 'badge-inactive'}`} style={{ minWidth: '70px', justifyContent: 'center' }}>
                       {u.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{u.created_at?.slice(0, 10)}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '.4rem' }}>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'inline-flex', gap: '.5rem' }}>
                       <button className="btn btn-secondary btn-sm" onClick={() => openEdit(u)}>✏️ Edit</button>
-                      <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)}>
+                      <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)} style={{ minWidth: '95px', justifyContent: 'center' }}>
                         {u.is_active ? 'Deactivate' : 'Activate'}
                       </button>
                     </div>
@@ -216,7 +221,7 @@ export default function AdminDashboardClient() {
                 </tr>
               ))}
               {!loading && !filtered.length && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
                   {users.length === 0 ? 'No users yet. Add one above.' : 'No users match your filter.'}
                 </td></tr>
               )}
