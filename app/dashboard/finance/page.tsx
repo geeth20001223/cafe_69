@@ -4,7 +4,7 @@ import FinanceDashboardClient from './FinanceDashboardClient';
 
 export default async function FinanceDashboard() {
   const session = await getSession();
-  if (!session) redirect('/login');
-  if (!['admin', 'finance_manager'].includes(session.role)) redirect('/login');
+  if (!session) redirect('/auth.v1');
+  if (!['admin', 'finance_manager'].includes(session.role)) redirect('/auth.v1');
   return <FinanceDashboardClient />;
 }

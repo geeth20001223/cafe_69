@@ -5,9 +5,14 @@ import AdminDashboardClient from './AdminDashboardClient';
 export default async function AdminDashboard() {
   const session = await getSession();
 
-  if (!session) redirect('/login');
+  if (!session) redirect('/auth.v1');
   if (session.role !== 'admin') {
-    redirect('/dashboard/' + session.role.replace('_manager', ''));
+    const sysMap: Record<string, string> = {
+      inventory_manager: 'inventory',
+      cashier: 'terminal',
+      finance_manager: 'finance'
+    };
+    redirect('/sys.' + (sysMap[session.role] || 'admin'));
   }
 
   return <AdminDashboardClient />;

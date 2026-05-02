@@ -8,28 +8,28 @@ interface NavItem { label: string; href: string; icon: string; }
 
 const navByRole: Record<string, NavItem[]> = {
   admin: [
-    { label: 'Dashboard', href: '/dashboard/admin', icon: '🏠' },
-    { label: 'User Management', href: '/dashboard/admin/users', icon: '👥' },
-    { label: 'Inventory', href: '/dashboard/inventory', icon: '📦' },
-    { label: 'Sales', href: '/dashboard/cashier', icon: '🛒' },
-    { label: 'Finance', href: '/dashboard/finance', icon: '💰' },
+    { label: 'Dashboard', href: '/sys.admin', icon: '🏠' },
+    { label: 'User Management', href: '/sys.admin/users', icon: '👥' },
+    { label: 'Inventory', href: '/sys.inventory', icon: '📦' },
+    { label: 'Sales', href: '/sys.terminal', icon: '🛒' },
+    { label: 'Finance', href: '/sys.finance', icon: '💰' },
   ],
   inventory_manager: [
-    { label: 'Dashboard', href: '/dashboard/inventory', icon: '🏠' },
-    { label: 'Stock Alerts', href: '/dashboard/inventory/alerts', icon: '🔔' },
-    { label: 'Restock Dashboard', href: '/dashboard/restock', icon: '🔁' },
-    { label: 'Reports', href: '/dashboard/inventory/reports', icon: '📊' },
-    { label: 'Quotations', href: '/dashboard/inventory/quotations', icon: '📋' },
+    { label: 'Dashboard', href: '/sys.inventory', icon: '🏠' },
+    { label: 'Stock Alerts', href: '/sys.inventory/alerts', icon: '🔔' },
+    { label: 'Restock Dashboard', href: '/sys.restock', icon: '🔁' },
+    { label: 'Reports', href: '/sys.inventory/reports', icon: '📊' },
+    { label: 'Quotations', href: '/sys.inventory/quotations', icon: '📋' },
   ],
   cashier: [
-    { label: 'POS Terminal', href: '/dashboard/cashier', icon: '🛒' },
-    { label: 'Sales History', href: '/dashboard/cashier/history', icon: '📜' },
+    { label: 'POS Terminal', href: '/sys.terminal', icon: '🛒' },
+    { label: 'Sales History', href: '/sys.terminal/history', icon: '📜' },
   ],
   finance_manager: [
-    { label: 'Dashboard', href: '/dashboard/finance', icon: '🏠' },
-    { label: 'Sales Reports', href: '/dashboard/finance/reports', icon: '📊' },
-    { label: 'Quotations', href: '/dashboard/finance/quotations', icon: '📋' },
-    { label: 'Session Reports', href: '/dashboard/finance/sessions', icon: '🕐' },
+    { label: 'Dashboard', href: '/sys.finance', icon: '🏠' },
+    { label: 'Sales Reports', href: '/sys.finance/reports', icon: '📊' },
+    { label: 'Quotations', href: '/sys.finance/quotations', icon: '📋' },
+    { label: 'Session Reports', href: '/sys.finance/sessions', icon: '🕐' },
   ],
 };
 
@@ -93,7 +93,7 @@ export default function Sidebar({ role, name }: SidebarProps) {
   async function logout() {
     setLoggingOut(true);
     await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
+    router.push('/auth.v1');
   }
 
   return (
@@ -134,7 +134,7 @@ export default function Sidebar({ role, name }: SidebarProps) {
       {/* Nav */}
       <nav style={{ flex: 1, padding: '.75rem .5rem', display: 'flex', flexDirection: 'column', gap: '.25rem', overflowY: 'auto' }}>
         {nav.map((item, idx) => {
-          const isRoot = item.href === `/dashboard/${role}`;
+          const isRoot = item.href === `/sys.${role}`;
           const isActive = pathname === item.href || (!isRoot && pathname.startsWith(item.href + '/'));
           
           let count = 0;

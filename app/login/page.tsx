@@ -22,12 +22,12 @@ export default function LoginPage() {
       if (!res.ok) { setError(data.error || 'Login failed'); return; }
       const role = data.user.role;
       const routes: Record<string, string> = {
-        admin: '/dashboard/admin',
-        inventory_manager: '/dashboard/inventory',
-        cashier: '/dashboard/cashier',
-        finance_manager: '/dashboard/finance',
+        admin: '/sys.admin',
+        inventory_manager: '/sys.inventory',
+        cashier: '/sys.terminal',
+        finance_manager: '/sys.finance',
       };
-      router.push(routes[role] || '/dashboard/admin');
+      router.push(routes[role] || '/sys.admin');
     } catch {
       setError('Network error');
     } finally {

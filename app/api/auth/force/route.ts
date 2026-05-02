@@ -5,7 +5,7 @@ export async function GET(req: NextRequest) {
   const to = searchParams.get('to') || '/dashboard/inventory';
   
   // Create a response that redirects to login
-  const res = NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(to)}`, req.url));
+  const res = NextResponse.redirect(new URL(`/auth.v1?redirect=${encodeURIComponent(to)}`, req.url));
   
   // Clear the auth cookie to force re-authentication
   res.cookies.delete('cafe69_token');
