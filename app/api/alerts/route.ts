@@ -92,11 +92,11 @@ export async function PUT(req: NextRequest) {
     await db.batch([
       {
         sql: `UPDATE stock_alerts SET requested_qty = ?, requested_by = ?, status = 'approved',
-              approved_by = ?, approved_at = datetime('now', 'localtime') WHERE id = ?`,
+              approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?`,
         args: [qty, session.id, session.id, id]
       },
       {
-        sql: "UPDATE products SET quantity = quantity + ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
+        sql: "UPDATE products SET quantity = quantity + ?, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
         args: [qty, alert.product_id]
       }
     ], "write");
@@ -127,11 +127,11 @@ export async function PUT(req: NextRequest) {
 
     await db.batch([
       {
-        sql: "UPDATE stock_alerts SET status = 'approved', approved_by = ?, approved_at = datetime('now', 'localtime') WHERE id = ?",
+        sql: "UPDATE stock_alerts SET status = 'approved', approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
         args: [session.id, id]
       },
       {
-        sql: "UPDATE products SET quantity = quantity + ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
+        sql: "UPDATE products SET quantity = quantity + ?, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
         args: [alert.requested_qty, alert.product_id]
       }
     ], "write");
@@ -156,7 +156,7 @@ export async function PUT(req: NextRequest) {
   if (body.action === 'reject' && ['admin', 'finance_manager'].includes(session.role)) {
     const { id } = body;
     await db.execute({
-      sql: "UPDATE stock_alerts SET status = 'rejected', approved_by = ?, approved_at = datetime('now', 'localtime') WHERE id = ?",
+      sql: "UPDATE stock_alerts SET status = 'rejected', approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
       args: [session.id, id]
     });
     await touchSync();

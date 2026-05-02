@@ -55,3 +55,12 @@ export function getSessionLabel(session: SessionType): string {
   if (session === 'lunch') return '🌅 Lunch Session (7:00 AM – 4:00 PM)';
   return '🌙 Night Session (4:00 PM – 7:00 AM)';
 }
+
+export function getSLDateString(date?: Date): string {
+  const d = date || getSLTime();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+

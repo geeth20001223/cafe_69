@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/app/lib/db';
 import { getSessionFromRequest } from '@/app/lib/auth';
 import { transporter } from '@/app/lib/mailer';
+import { getSLTime } from '@/app/lib/session';
 
 // ─── HTML email builder ───────────────────────────────────────────────────────
 function buildEmailHtml(report: {
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
   const database = getDb();
   
   // Logical Session Range calculation
-  const now = new Date();
+  const now = getSLTime();
   const businessDay = date || now.toISOString().split('T')[0];
   const sType = sessionType || (now.getHours() >= 7 && now.getHours() < 16 ? 'lunch' : 'night');
 
@@ -285,7 +286,7 @@ export async function POST(req: NextRequest) {
   const productSales = productSalesRes.rows;
 
   const reportObj = {
-    sessionType, date, generated: now.toLocaleString('en-LK'), cashierName: session.name,
+    sessionType, date, generated: now.toLocaleString('en-LK', { timeZone: 'Asia/Colombo' }), cashierName: session.name,
     totalRevenue: Number(totalRevenue), totalTx: Number(totalTx),
     cashSales: Number(cashSales), cardSales: Number(cardSales), totalDiscount: Number(totalDiscount),
     sales: sales || [], productSales: productSales || [],

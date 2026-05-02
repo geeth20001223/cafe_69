@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { getSLTime, getSLDateString } from '@/app/lib/session';
 import PriceManagementPage from './prices/page';
 
 // ── Bill Modal ────────────────────────────────────────────────────────────────
@@ -211,8 +212,9 @@ export default function FinanceDashboardClient() {
   // ── Stats ──────────────────────────────────────────────────────────────
   const loadStats = useCallback(async () => {
     setStatsLoading(true);
-    const today    = new Date().toISOString().slice(0, 10);
-    const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+    const today    = getSLDateString();
+    const slNow    = getSLTime();
+    const firstDay = getSLDateString(new Date(slNow.getFullYear(), slNow.getMonth(), 1));
     const [todayRes, monthRes, quotesRes] = await Promise.all([
       fetch(`/api/sales?from=${today}&to=${today}`),
       fetch(`/api/sales?from=${firstDay}&to=${today}`),

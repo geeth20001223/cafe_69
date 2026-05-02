@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getSLTime } from '@/app/lib/session';
 
 export async function generateSalesPDF(report: any) {
   const doc = new jsPDF();
@@ -83,7 +84,8 @@ export async function generateInventoryPDF(data: any) {
   
   doc.setFontSize(12);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Date: ${new Date().toLocaleDateString('en-LK')}`, 14, 30);
+  const slNow = getSLTime();
+  doc.text(`Date: ${slNow.toLocaleDateString('en-LK')}`, 14, 30);
   doc.line(14, 35, 196, 35);
 
   autoTable(doc, {

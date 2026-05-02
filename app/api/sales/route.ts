@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
 
       // Prepare stock update
       stockUpdateQueries.push({
-        sql: "UPDATE products SET quantity = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
+        sql: "UPDATE products SET quantity = ?, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
         args: [newQty, item.product_id]
       });
 

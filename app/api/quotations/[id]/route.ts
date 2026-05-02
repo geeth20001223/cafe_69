@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const result = await db.execute({
-      sql: "UPDATE quotations SET status = ?, approved_by = ?, approved_at = datetime('now', 'localtime'), approval_notes = ?, is_read = 0 WHERE id = ?",
+      sql: "UPDATE quotations SET status = ?, approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes'), approval_notes = ?, is_read = 0 WHERE id = ?",
       args: [body.status, session.id, body.approval_notes || null, qId]
     });
     

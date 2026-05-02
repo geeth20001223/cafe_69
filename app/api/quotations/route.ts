@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   const result = await db.execute({
     sql: `
       INSERT INTO quotations (manager_id, title, items_json, total, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
+      VALUES (?, ?, ?, ?, ?, datetime('now', '+5 hours', '30 minutes'))
     `,
     args: [session.id, title || 'Quotation', JSON.stringify(items), total, notes || null]
   });

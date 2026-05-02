@@ -51,7 +51,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       vals.push(numFields.includes(key) ? parseFloat(body[key]) : body[key]);
     }
   }
-  fields.push("updated_at = datetime('now', 'localtime')");
+  fields.push("updated_at = datetime('now', '+5 hours', '30 minutes')");
   vals.push(id);
 
   await db.execute({
@@ -74,7 +74,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
   const db = getDb();
   await db.execute({
-    sql: "UPDATE products SET status = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
+    sql: "UPDATE products SET status = ?, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
     args: ['inactive', id]
   });
   return NextResponse.json({ success: true });
@@ -93,7 +93,7 @@ async function checkAndCreateAlert(db: any, productId: number) {
       await db.execute({
         sql: `
           INSERT INTO stock_alerts (product_id, alert_type, message, created_at)
-          VALUES (?, 'low_stock', ?, datetime('now', 'localtime'))
+          VALUES (?, 'low_stock', ?, datetime('now', '+5 hours', '30 minutes'))
         `,
         args: [productId, `Low stock: "${product.name}" has ${product.quantity} ${product.unit} remaining (threshold: ${product.low_stock_threshold})`]
       });

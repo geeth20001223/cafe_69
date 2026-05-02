@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { getSLDateString } from '@/app/lib/session';
 import Link from 'next/link';
 
 interface User { id: number; name: string; email: string; role: string; is_active: number; created_at: string; }
@@ -37,7 +38,7 @@ export default function AdminDashboardClient() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getSLDateString();
     const [usersRes, prodRes, salesRes, alertRes] = await Promise.all([
       fetch('/api/users'),
       fetch('/api/products?status=active'),

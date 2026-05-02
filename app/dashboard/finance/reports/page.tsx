@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { getSLDateString } from '@/app/lib/session';
 import { 
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, 
   CartesianGrid, LineChart, Line, PieChart, Pie, Cell, Legend 
@@ -10,8 +11,8 @@ export default function FinanceReportsPage() {
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [invReports, setInvReports] = useState<any[]>([]);
   const [sessionReports, setSessionReports] = useState<any[]>([]);
-  const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().split('T')[0]);
-  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0]);
+  const [dateFrom, setDateFrom] = useState(() => getSLDateString());
+  const [dateTo, setDateTo] = useState(() => getSLDateString());
   const [tab, setTab] = useState<'sales' | 'inventory' | 'sessions'>('sales');
   const [selectedReport, setSelectedReport] = useState<any>(null);
 

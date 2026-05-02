@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/app/lib/db';
 import { getSessionFromRequest } from '@/app/lib/auth';
 import { transporter } from '@/app/lib/mailer';
+import { getSLTime } from '@/app/lib/session';
 import { generateInventoryPDF } from '@/app/lib/pdf-generator';
 
 // ─── HTML email builder for inventory ─────────────────────────────────────────
@@ -120,7 +121,8 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === 'sales_summary') {
-    const from = dateFrom || new Date().toISOString().split('T')[0];
+    const slNow = getSLTime();
+    const from = dateFrom || slNow.toISOString().split('T')[0];
     const to = dateTo || from;
     const summaryRes = await db.execute({
       sql: `
@@ -173,8 +175,9 @@ export async function POST(req: NextRequest) {
   `);
   const products = productsRes.rows;
 
+  const slNow = getSLTime();
   const data = {
-    generated_at: new Date().toISOString(),
+    generated_at: slNow.toISOString(),
     generated_by: session.name,
     products,
     summary: {
@@ -184,7 +187,7 @@ export async function POST(req: NextRequest) {
     }
   };
 
-  const date = report_date || new Date().toISOString().split('T')[0];
+  const date = report_date || slNow.toISOString().split('T')[0];
   const finalTitle = title || `Inventory Report - ${date}`;
   const result = await db.execute({
     sql: `
