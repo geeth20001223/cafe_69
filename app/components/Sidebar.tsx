@@ -33,9 +33,9 @@ const navByRole: Record<string, NavItem[]> = {
   ],
 };
 
-interface SidebarProps { role: string; name: string; urlKey?: string; }
+interface SidebarProps { role: string; name: string; urlKey?: string; onClose?: () => void; }
 
-export default function Sidebar({ role, name, urlKey }: SidebarProps) {
+export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -166,6 +166,7 @@ export default function Sidebar({ role, name, urlKey }: SidebarProps) {
                     ));
                   }
                 }
+                if (onClose) onClose();
               }}
               className={`sidebar-link ${isActive ? 'active' : ''} fade-in stagger-${(idx % 4) + 1} ${shouldAnimate ? 'animate-pulse-notification' : ''}`}
               style={{ position: 'relative' }}
