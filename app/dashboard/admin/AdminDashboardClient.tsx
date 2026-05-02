@@ -195,12 +195,12 @@ export default function AdminDashboardClient() {
           <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 .5rem' }}>
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Name</th>
-                <th style={{ width: '25%' }}>Email</th>
-                <th style={{ width: '15%' }}>Role</th>
-                <th style={{ width: '12%' }}>Status</th>
+                <th style={{ width: '22%' }}>Name</th>
+                <th style={{ width: '22%' }}>Email</th>
+                <th style={{ width: '13%' }}>Role</th>
+                <th style={{ width: '10%' }}>Status</th>
                 <th style={{ width: '10%' }}>Created</th>
-                <th style={{ width: '13%', textAlign: 'right' }}>Actions</th>
+                <th style={{ width: '23%', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody style={{ verticalAlign: 'middle' }}>
@@ -228,12 +228,12 @@ export default function AdminDashboardClient() {
                   </td>
                   <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{u.created_at?.slice(0, 10)}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '.5rem' }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => openEdit(u)}>✏️ Edit</button>
-                      <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)} style={{ minWidth: '95px', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', gap: '.4rem', justifyContent: 'flex-end' }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => openEdit(u)} style={{ padding: '0.4rem 0.6rem' }}>✏️ Edit</button>
+                      <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)} style={{ minWidth: '95px', justifyContent: 'center', padding: '0.4rem 0.6rem' }}>
                         {u.is_active ? 'Deactivate' : 'Activate'}
                       </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)} title="Delete Permanently">🗑️</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)} title="Delete Permanently" style={{ padding: '0.4rem 0.6rem' }}>🗑️</button>
                     </div>
                   </td>
                 </tr>

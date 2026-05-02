@@ -58,7 +58,16 @@ export default function UsersPage() {
 
       <div className="card table-wrap">
         <table>
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <thead>
+            <tr>
+              <th style={{ width: '22%' }}>Name</th>
+              <th style={{ width: '22%' }}>Email</th>
+              <th style={{ width: '13%' }}>Role</th>
+              <th style={{ width: '10%' }}>Status</th>
+              <th style={{ width: '10%' }}>Created</th>
+              <th style={{ width: '23%', textAlign: 'right' }}>Actions</th>
+            </tr>
+          </thead>
           <tbody>
             {filtered.map(u => (
               <tr key={u.id}>
@@ -67,12 +76,12 @@ export default function UsersPage() {
                 <td><span className="badge badge-pending">{ROLE_LABELS[u.role] || u.role}</span></td>
                 <td><span className={`badge ${u.is_active ? 'badge-active' : 'badge-inactive'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></td>
                 <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{u.created_at?.slice(0, 10)}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: '.5rem' }}>
-                    <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)}>
+                <td style={{ textAlign: 'right' }}>
+                  <div style={{ display: 'flex', gap: '.4rem', justifyContent: 'flex-end' }}>
+                    <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)} style={{ minWidth: '95px', justifyContent: 'center', padding: '0.4rem 0.6rem' }}>
                       {u.is_active ? 'Deactivate' : 'Activate'}
                     </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)}>🗑️</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)} style={{ padding: '0.4rem 0.6rem' }}>🗑️</button>
                   </div>
                 </td>
               </tr>
