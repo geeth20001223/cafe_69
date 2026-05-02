@@ -6,10 +6,15 @@ export const metadata: Metadata = {
   description: 'Point of Sale system for Cafe 69',
 };
 
+import TableScrollSync from './components/TableScrollSync';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <TableScrollSync />
+        {children}
+      </body>
     </html>
   );
 }

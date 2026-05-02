@@ -290,12 +290,36 @@ body {
 .table-wrap {
   overflow-x: auto;
   width: 100%;
-  transform: rotateX(180deg); /* Move scrollbar to top */
   -ms-overflow-style: auto;
+  scrollbar-width: thin; /* Modern browsers */
 }
 
 .table-wrap table {
-  transform: rotateX(180deg); /* Flip content back */
+  /* Reset flip */
+}
+
+/* Custom top scrollbar mirror */
+.table-scrollbar-top {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+
+.table-scrollbar-top::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-scrollbar-top::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scrollbar-top::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 10px;
+}
+
+/* Only show top scrollbar if the wrap below it is actually overflowing */
+.table-scrollbar-top:not(:has(+ .table-wrap[scrollLeft])) {
+  /* This selector is tricky in CSS, but the JS handles visibility usually */
 }
 
 
