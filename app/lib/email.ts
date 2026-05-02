@@ -25,7 +25,7 @@ export interface StockAlertEmailPayload {
 export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Promise<{ success: boolean; error?: string }> {
   const db = getDb();
   const managersRes = await db.execute(
-    "SELECT email FROM users WHERE role = 'inventory_manager' AND is_active = 1"
+    "SELECT email FROM users WHERE role = 'finance_manager' AND is_active = 1"
   );
   const managerEmails = managersRes.rows.map(m => String(m.email)).join(', ');
   const senderEmail = process.env.GMAIL_USER;
@@ -34,7 +34,7 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
     return { success: false, error: 'Gmail credentials are not configured in .env.local' };
   }
   if (!managerEmails) {
-    return { success: false, error: 'No active Inventory Managers found in the database to receive the alert.' };
+    return { success: false, error: 'No active Finance Managers found in the database to receive the alert.' };
   }
 
   const { productName, quantity, unit, threshold, alertMessage, createdAt } = payload;
@@ -50,7 +50,7 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
       <!-- Body -->
       <div style="padding: 32px;">
         <p style="color: #e5e7eb; font-size: 16px; margin: 0 0 24px;">
-          Dear Stock Manager, a product has fallen <strong style="color: #ef4444;">below the minimum stock threshold</strong> and requires immediate attention.
+          Dear Finance Manager, a product has fallen <strong style="color: #ef4444;">below the minimum stock threshold</strong> and requires immediate attention.
         </p>
 
         <!-- Product Card -->

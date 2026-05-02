@@ -46,5 +46,5 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: result.error || 'Failed to send email' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: `Email sent to stock manager successfully` });
+    return NextResponse.json({ success: true, message: `Email sent to finance manager successfully` });
 }
