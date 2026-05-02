@@ -6,5 +6,5 @@ export default async function FinanceDashboard() {
   const session = await getSession();
   if (!session) redirect('/auth.v1');
   if (!['admin', 'finance_manager'].includes(session.role)) redirect('/auth.v1');
-  return <FinanceDashboardClient />;
+  return <FinanceDashboardClient urlKey={session.urlKey as string} />;
 }

@@ -30,6 +30,8 @@ const navByRole: Record<string, NavItem[]> = {
     { label: 'Sales Reports', href: '/sys.finance/reports', icon: '📊' },
     { label: 'Quotations', href: '/sys.finance/quotations', icon: '📋' },
     { label: 'Session Reports', href: '/sys.finance/sessions', icon: '🕐' },
+    { label: 'Price Management', href: '/sys.finance/prices', icon: '💲' },
+    { label: 'Restock Approval', href: '/sys.finance/restock', icon: '🔁' },
   ],
 };
 

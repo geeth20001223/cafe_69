@@ -15,5 +15,5 @@ export default async function AdminDashboard() {
     redirect('/sys.' + (sysMap[session.role] || 'admin'));
   }
 
-  return <AdminDashboardClient />;
+  return <AdminDashboardClient urlKey={session.urlKey as string} />;
 }

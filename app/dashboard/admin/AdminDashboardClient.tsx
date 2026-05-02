@@ -20,7 +20,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 const emptyForm = { name: '', email: '', password: '', role: 'cashier' };
 
-export default function AdminDashboardClient() {
+export default function AdminDashboardClient({ urlKey }: { urlKey: string }) {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<Stats>({ totalSales: 0, salesCount: 0, productsCount: 0, alertsCount: 0 });
   const [loading, setLoading] = useState(true);

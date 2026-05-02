@@ -169,7 +169,7 @@ function QtyStepper({
   );
 }
 
-export default function FinanceDashboardClient() {
+export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
   const [todayRevenue, setTodayRevenue]   = useState(0);
   const [todayCount, setTodayCount]       = useState(0);
   const [monthRevenue, setMonthRevenue]   = useState(0);
@@ -348,11 +348,11 @@ export default function FinanceDashboardClient() {
       <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem' }}>🛠️ Management Modules</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '1rem', marginBottom: '2rem' }}>
         {[
-          { label: 'Sales Reports', href: '/dashboard/finance/reports', icon: '📊', color: '#3b82f6' },
-          { label: 'Quotations', href: '/dashboard/finance/quotations', icon: '📋', color: '#f59e0b' },
-          { label: 'Session Reports', href: '/dashboard/finance/sessions', icon: '🕐', color: '#8b5cf6' },
-          { label: 'Price List', href: '/dashboard/finance/prices', icon: '💲', color: '#10b981' },
-          { label: 'Restock Request', href: '/dashboard/finance/restock', icon: '🔁', color: '#ef4444' },
+          { label: 'Sales Reports', href: `/s/${urlKey}/sys.finance/reports`, icon: '📊', color: '#3b82f6' },
+          { label: 'Quotations', href: `/s/${urlKey}/sys.finance/quotations`, icon: '📋', color: '#f59e0b' },
+          { label: 'Session Reports', href: `/s/${urlKey}/sys.finance/sessions`, icon: '🕐', color: '#8b5cf6' },
+          { label: 'Price List', href: `/s/${urlKey}/sys.finance/prices`, icon: '💲', color: '#10b981' },
+          { label: 'Restock Request', href: `/s/${urlKey}/sys.finance/restock`, icon: '🔁', color: '#ef4444' },
         ].map(m => (
           <a
             key={m.label}

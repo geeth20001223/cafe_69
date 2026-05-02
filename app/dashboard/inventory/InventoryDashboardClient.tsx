@@ -54,7 +54,7 @@ const STATUS_CFG = {
   },
 };
 
-export default function InventoryDashboardClient() {
+export default function InventoryDashboardClient({ urlKey }: { urlKey: string }) {
   const [stats, setStats] = useState<Stats>({ products: 0, categories: 0, lowStock: 0, unreadAlerts: 0, inventoryValue: 0 });
   const [allAlerts, setAllAlerts] = useState<Alert[]>([]);
   const [recentQuotations, setRecentQuotations] = useState<any[]>([]);
@@ -212,7 +212,7 @@ export default function InventoryDashboardClient() {
               </div>
               <div style={{ display: 'flex', gap: '.5rem' }}>
                 <Link 
-                  href="/dashboard/inventory/quotations" 
+                  href={`/s/${urlKey}/sys.inventory/quotations`} 
                   onClick={async () => {
                     const unread = recentQuotations.filter(q => q.status !== 'pending' && q.is_read === 0);
                     if (unread.length > 0) {
@@ -229,7 +229,7 @@ export default function InventoryDashboardClient() {
                     </span>
                   )}
                 </Link>
-                <Link href="/dashboard/inventory/alerts" className={`btn btn-secondary btn-sm ${stats.unreadAlerts > 0 ? 'animate-pulse-notification' : ''}`} style={{ position: 'relative', overflow: 'visible' }}>
+                <Link href={`/s/${urlKey}/sys.inventory/alerts`} className={`btn btn-secondary btn-sm ${stats.unreadAlerts > 0 ? 'animate-pulse-notification' : ''}`} style={{ position: 'relative', overflow: 'visible' }}>
                   <span style={{ fontSize: '1.1rem' }}>🔔</span> 
                   Alerts
                   {stats.unreadAlerts > 0 && <span className="notification-badge" style={{ top: '-4px', right: '-4px' }}>{stats.unreadAlerts}</span>}
@@ -369,7 +369,7 @@ export default function InventoryDashboardClient() {
           <div className="card" style={{ marginTop: '1.5rem', borderTop: '3px solid var(--info)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <h2 style={{ fontWeight: 700, fontSize: '1.1rem' }}>📜 Recent Quotations</h2>
-              <Link href="/dashboard/inventory/quotations" style={{ fontSize: '.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>View All →</Link>
+              <Link href={`/s/${urlKey}/sys.inventory/quotations`} style={{ fontSize: '.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>View All →</Link>
             </div>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>Loading…</div>

@@ -6,5 +6,5 @@ export default async function InventoryDashboard() {
   const session = await getSession();
   if (!session) redirect('/auth.v1');
   if (!['admin', 'inventory_manager'].includes(session.role)) redirect('/auth.v1');
-  return <InventoryDashboardClient />;
+  return <InventoryDashboardClient urlKey={session.urlKey as string} />;
 }

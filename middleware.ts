@@ -85,12 +85,17 @@ export default async function middleware(req: NextRequest) {
     
     // If accessing dashboard directly, force a redirect to the masked path
     const roleMap: Record<string, string> = {
-      admin: 'sys.admin',
-      cashier: 'sys.terminal',
-      inventory_manager: 'sys.inventory',
-      finance_manager: 'sys.finance'
+      admin: 'admin',
+      cashier: 'terminal',
+      inventory_manager: 'inventory',
+      finance_manager: 'finance'
     };
-    return NextResponse.redirect(new URL(`/s/${session.urlKey}/${roleMap[session.role] || 'sys.admin'}`, req.url));
+    
+    const roleKey = roleMap[session.role] || 'admin';
+    const internalPrefix = `/dashboard/${session.role === 'inventory_manager' ? 'inventory' : session.role === 'finance_manager' ? 'finance' : session.role === 'cashier' ? 'cashier' : 'admin'}`;
+    const subPath = pathname.replace(internalPrefix, '');
+    
+    return NextResponse.redirect(new URL(`/s/${session.urlKey}/sys.${roleKey}${subPath}`, req.url));
   }
 
   return NextResponse.next();
