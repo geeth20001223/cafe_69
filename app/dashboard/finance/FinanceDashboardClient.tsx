@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { getSLTime, getSLDateString, getBusinessDateString } from '@/app/lib/session';
+import { getSLTime, getSLDateString, getBusinessDateString, parseDBTime } from '@/app/lib/session';
 import PriceManagementPage from './prices/page';
 
 // ── Bill Modal ────────────────────────────────────────────────────────────────
@@ -483,7 +483,7 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
                   <tr key={s.id}>
                     <td style={{ color: 'var(--text-muted)', fontWeight: 600 }}>#{s.id}</td>
                     <td style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
-                       {new Date(s.created_at).toLocaleTimeString('en-LK', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                       {parseDBTime(s.created_at).toLocaleTimeString('en-LK', { hour: '2-digit', minute: '2-digit', hour12: true })}
                     </td>
                     <td><span className={`badge badge-${s.session_type}`}>{s.session_type === 'lunch' ? '🌅 Lunch' : '🌙 Night'}</span></td>
                     <td style={{ color: 'var(--text-secondary)' }}>{s.cashier_name || '—'}</td>

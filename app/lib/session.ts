@@ -82,3 +82,15 @@ export function getBusinessDateString(date?: Date): string {
   return getSLDateString(d);
 }
 
+/**
+ * Parses a date string from the database (UTC) and returns a Date object.
+ * Appends 'Z' to ensure the browser treats it as UTC.
+ */
+export function parseDBTime(dbStr: string): Date {
+  if (!dbStr) return new Date();
+  // If already has timezone, return as is
+  if (dbStr.includes('Z') || dbStr.includes('+')) return new Date(dbStr);
+  // SQLite space format: 2024-01-01 12:00:00 -> 2024-01-01T12:00:00Z
+  const iso = dbStr.replace(' ', 'T') + 'Z';
+  return new Date(iso);
+}

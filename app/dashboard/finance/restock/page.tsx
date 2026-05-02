@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { parseDBTime } from '@/app/lib/session';
 
 interface Alert {
   id: number;
@@ -216,7 +217,7 @@ export default function FinanceRestockPage() {
                       </div>
                     </div>
                       <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-                        Created: {new Date(alert.created_at).toLocaleString('en-LK', { dateStyle: 'short', timeStyle: 'short' })}
+                        Created: {parseDBTime(alert.created_at).toLocaleString('en-LK', { dateStyle: 'short', timeStyle: 'short' })}
                       </div>
                   </div>
 
@@ -237,7 +238,7 @@ export default function FinanceRestockPage() {
                     <div style={{ display: 'flex', gap: '2rem', padding: '.75rem 1rem', background: 'rgba(0,0,0,0.03)', borderRadius: '8px', fontSize: '.9rem' }}>
                       <div><span style={{ color: 'var(--text-muted)' }}>Quantity:</span> <strong>{alert.requested_qty} {alert.unit}</strong></div>
                       <div><span style={{ color: 'var(--text-muted)' }}>Reviewer:</span> <strong>{alert.approved_by_name}</strong></div>
-                      <div><span style={{ color: 'var(--text-muted)' }}>Date:</span> <strong>{new Date(alert.approved_at || '').toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' })}</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Date:</span> <strong>{parseDBTime(alert.approved_at || '').toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' })}</strong></div>
                     </div>
                   )}
                 </div>

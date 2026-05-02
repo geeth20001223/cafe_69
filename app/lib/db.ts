@@ -24,14 +24,14 @@ export async function initSchema() {
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin','inventory_manager','cashier','finance_manager')),
       is_active INTEGER DEFAULT 1,
-      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       description TEXT,
       status TEXT DEFAULT 'active' CHECK(status IN ('active','inactive')),
-      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,8 +44,8 @@ export async function initSchema() {
       low_stock_threshold REAL DEFAULT 10,
       status TEXT DEFAULT 'active' CHECK(status IN ('active','inactive')),
       description TEXT,
-      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes')),
-      updated_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS stock_alerts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,7 +53,7 @@ export async function initSchema() {
       alert_type TEXT DEFAULT 'low_stock',
       message TEXT NOT NULL,
       is_read INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS sales (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +66,7 @@ export async function initSchema() {
       customer_phone TEXT,
       notes TEXT,
       status TEXT DEFAULT 'completed',
-      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS sale_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +88,7 @@ export async function initSchema() {
       notes TEXT,
       approved_by INTEGER REFERENCES users(id),
       approved_at TEXT,
-      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS inventory_reports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,7 +97,7 @@ export async function initSchema() {
       report_type TEXT DEFAULT 'daily',
       title TEXT,
       data_json TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS session_reports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,12 +108,12 @@ export async function initSchema() {
       total_transactions INTEGER DEFAULT 0,
       data_json TEXT NOT NULL,
       sent_to_finance INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     `CREATE TABLE IF NOT EXISTS system_sync (
       id INTEGER PRIMARY KEY,
       version INTEGER DEFAULT 0,
-      updated_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+      updated_at TEXT DEFAULT (datetime('now'))
     )`,
     "INSERT OR IGNORE INTO system_sync (id, version) VALUES (1, 0)"
   ], "write");
@@ -150,6 +150,6 @@ export async function initSchema() {
 
 export async function touchSync() {
   const db = getDb();
-  await db.execute("UPDATE system_sync SET version = version + 1, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = 1");
+  await db.execute("UPDATE system_sync SET version = version + 1, updated_at = datetime('now') WHERE id = 1");
 }
 

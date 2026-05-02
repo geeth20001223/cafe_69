@@ -126,11 +126,11 @@ export async function GET(req: NextRequest) {
     const to = dateTo || from;
     const summaryRes = await db.execute({
       sql: `
-        SELECT DATE(datetime(created_at, '-7 hours')) as date, session_type, COUNT(*) as transactions, SUM(total_amount) as total,
+        SELECT DATE(datetime(created_at, '+5 hours', '30 minutes', '-7 hours')) as date, session_type, COUNT(*) as transactions, SUM(total_amount) as total,
           SUM(CASE WHEN payment_method = 'cash' THEN total_amount ELSE 0 END) as cash_total,
           SUM(CASE WHEN payment_method = 'card' THEN total_amount ELSE 0 END) as card_total
-        FROM sales WHERE DATE(datetime(created_at, '-7 hours')) BETWEEN ? AND ?
-        GROUP BY DATE(datetime(created_at, '-7 hours')), session_type ORDER BY date DESC, session_type
+        FROM sales WHERE DATE(datetime(created_at, '+5 hours', '30 minutes', '-7 hours')) BETWEEN ? AND ?
+        GROUP BY DATE(datetime(created_at, '+5 hours', '30 minutes', '-7 hours')), session_type ORDER BY date DESC, session_type
       `,
       args: [from, to]
     });
@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
       sql: `
         SELECT si.product_name, SUM(si.quantity) as total_qty, SUM(si.subtotal) as total_revenue
         FROM sale_items si LEFT JOIN sales s ON si.sale_id = s.id
-        WHERE DATE(datetime(s.created_at, '-7 hours')) BETWEEN ? AND ? GROUP BY si.product_name ORDER BY total_revenue DESC LIMIT 10
+        WHERE DATE(datetime(s.created_at, '+5 hours', '30 minutes', '-7 hours')) BETWEEN ? AND ? GROUP BY si.product_name ORDER BY total_revenue DESC LIMIT 10
       `,
       args: [from, to]
     });
