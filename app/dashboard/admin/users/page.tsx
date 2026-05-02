@@ -35,6 +35,16 @@ export default function UsersPage() {
     load();
   }
 
+  async function deleteUser(u: User) {
+    if (!confirm(`❗ Are you sure you want to PERMANENTLY DELETE "${u.name}"?\n\nThis action cannot be undone.`)) return;
+    const res = await fetch(`/api/users/${u.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json();
+      alert(d.error || 'Failed to delete user');
+    }
+    load();
+  }
+
   return (
     <div className="fade-in">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -58,9 +68,12 @@ export default function UsersPage() {
                 <td><span className={`badge ${u.is_active ? 'badge-active' : 'badge-inactive'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></td>
                 <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{u.created_at?.slice(0, 10)}</td>
                 <td>
-                  <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)}>
-                    {u.is_active ? 'Deactivate' : 'Activate'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '.5rem' }}>
+                    <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)}>
+                      {u.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)}>🗑️</button>
+                  </div>
                 </td>
               </tr>
             ))}

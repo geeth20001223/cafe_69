@@ -116,6 +116,22 @@ export default function AdminDashboardClient() {
     await loadAll();
   }
 
+  async function deleteUser(u: User) {
+    if (!confirm(`❗ Are you sure you want to PERMANENTLY DELETE "${u.name}"?\n\nThis action cannot be undone.`)) return;
+    
+    setLoading(true);
+    const res = await fetch(`/api/users/${u.id}`, { method: 'DELETE' });
+    const d = await res.json();
+    
+    if (res.ok) {
+      setSuccessMsg(`🗑️ User "${u.name}" deleted successfully`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } else {
+      alert(d.error || 'Failed to delete user');
+    }
+    await loadAll();
+  }
+
   return (
     <div className="fade-in">
       {/* Header */}
@@ -217,6 +233,7 @@ export default function AdminDashboardClient() {
                       <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)} style={{ minWidth: '95px', justifyContent: 'center' }}>
                         {u.is_active ? 'Deactivate' : 'Activate'}
                       </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)} title="Delete Permanently">🗑️</button>
                     </div>
                   </td>
                 </tr>

@@ -51,6 +51,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   const db = getDb();
-  await db.execute({ sql: 'UPDATE users SET is_active = 0 WHERE id = ?', args: [id] });
-  return NextResponse.json({ success: true });
+  
+  // Optional: Check for sales/quotations before hard delete to prevent orphaned records
+  // For now, we perform a hard delete as requested.
+  try {
+    await db.execute({ sql: 'DELETE FROM users WHERE id = ?', args: [id] });
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: 'Cannot delete user: They may have associated sales or reports. Deactivate them instead.' }, { status: 400 });
+  }
 }
+
