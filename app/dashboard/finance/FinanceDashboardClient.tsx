@@ -110,6 +110,7 @@ interface Alert {
   approved_by_name: string | null;
   approved_at: string | null;
   created_at: string;
+  is_read: number;
 }
 
 // Round to avoid floating point artifacts (e.g. 0.1+0.2 = 0.30000000004)

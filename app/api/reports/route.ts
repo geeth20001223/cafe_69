@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/app/lib/db';
 import { getSessionFromRequest } from '@/app/lib/auth';
 import { transporter } from '@/app/lib/mailer';
-import { getSLTime, getSLDateString } from '@/app/lib/session';
+import { getSLTime, getSLDateString, getBusinessDateString } from '@/app/lib/session';
 import { generateInventoryPDF } from '@/app/lib/pdf-generator';
 
 // ─── HTML email builder for inventory ─────────────────────────────────────────
