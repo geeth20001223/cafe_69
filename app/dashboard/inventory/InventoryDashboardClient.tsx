@@ -377,7 +377,7 @@ export default function InventoryDashboardClient() {
               <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '.85rem' }}>No recent quotations found</div>
             ) : (
               <div className="table-wrap">
-                <table>
+                <table style={{ minWidth: '900px' }}>
                   <thead><tr><th>Title</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
                   <tbody>
                     {recentQuotations.slice(0, 5).map(q => {

@@ -180,7 +180,7 @@ export default function PriceManagementPage() {
               <div style={{ padding: '1rem 1.25rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                 🏷️ {cat} <span style={{ fontSize: '.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '.15rem .5rem', borderRadius: '999px', border: '1px solid var(--border)' }}>{catProducts.length} items</span>
               </div>
-              <table>
+              <table style={{ minWidth: '900px' }}>
                 <thead>
                   <tr>
                     <th>Product</th>

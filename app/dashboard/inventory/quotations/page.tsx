@@ -112,7 +112,7 @@ export default function QuotationsPage() {
       </div>
 
       <div className="card table-wrap">
-        <table>
+        <table style={{ minWidth: '900px' }}>
           <thead><tr><th>Title</th><th>Total (LKR)</th><th>Status</th><th>Date</th><th>Approved By</th><th>Actions</th></tr></thead>
           <tbody>
             {quotations.map(q => (

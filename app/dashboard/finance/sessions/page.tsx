@@ -46,7 +46,7 @@ export default function SessionReportsPage() {
       )}
 
       <div className="card table-wrap fade-in stagger-2">
-        <table style={{ borderCollapse: 'separate', borderSpacing: '0 .25rem' }}>
+        <table style={{ minWidth: '900px', borderCollapse: 'separate', borderSpacing: '0 .25rem' }}>
           <thead>
             <tr>
               <th style={{ width: '15%' }}>Session</th>

@@ -150,7 +150,7 @@ export default function FinanceReportsPage() {
 
           <div className="card table-wrap">
             <h3 style={{ fontWeight: 600, marginBottom: '.75rem', fontSize: '.9rem' }}>Top Products List</h3>
-            <table>
+            <table style={{ minWidth: '900px' }}>
               <thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
               <tbody>
                 {topProducts.map((p, i) => (

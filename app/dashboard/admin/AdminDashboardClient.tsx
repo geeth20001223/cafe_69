@@ -192,7 +192,7 @@ export default function AdminDashboardClient() {
         </div>
 
         <div className="table-wrap">
-          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 .5rem' }}>
+          <table style={{ minWidth: '900px', borderCollapse: 'separate', borderSpacing: '0 .5rem' }}>
             <thead>
               <tr>
                 <th style={{ width: '22%' }}>Name</th>

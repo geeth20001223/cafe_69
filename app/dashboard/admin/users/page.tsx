@@ -57,7 +57,7 @@ export default function UsersPage() {
       </div>
 
       <div className="card table-wrap">
-        <table>
+        <table style={{ minWidth: '900px' }}>
           <thead>
             <tr>
               <th style={{ width: '22%' }}>Name</th>

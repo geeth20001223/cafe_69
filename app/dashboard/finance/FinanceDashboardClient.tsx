@@ -425,7 +425,7 @@ export default function FinanceDashboardClient() {
           </div>
         ) : (
           <div className="table-wrap">
-            <table>
+            <table style={{ minWidth: '900px' }}>
               <thead>
                 <tr>
                   <th>#</th>

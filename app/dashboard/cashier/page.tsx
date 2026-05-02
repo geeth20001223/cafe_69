@@ -399,7 +399,7 @@ export default function CashierPOS() {
 
             {sessionReport.sales.length > 0 && (
               <div className="table-wrap" style={{ marginBottom: '1rem' }}>
-                <table>
+                <table style={{ minWidth: '900px' }}>
                   <thead><tr><th>#</th><th>Customer</th><th>Payment</th><th>Amount</th><th>Time</th></tr></thead>
                   <tbody>
                     {sessionReport.sales.map((s: any) => (

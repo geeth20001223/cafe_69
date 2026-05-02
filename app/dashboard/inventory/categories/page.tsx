@@ -202,8 +202,8 @@ export default function CategoriesPage() {
                       </button>
                     </div>
                   ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.875rem' }}>
+                    <div className="table-wrap">
+                      <table style={{ minWidth: '900px', borderCollapse: 'collapse', fontSize: '.875rem' }}>
                         <thead>
                           <tr>
                             <th style={{ padding: '.6rem 1.25rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Product</th>
@@ -264,8 +264,8 @@ export default function CategoriesPage() {
               </div>
             </div>
             {expanded.has(-1) && (
-              <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.875rem' }}>
+              <div className="table-wrap" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                <table style={{ minWidth: '900px', borderCollapse: 'collapse', fontSize: '.875rem' }}>
                   <thead>
                     <tr>
                       <th style={{ padding: '.6rem 1.25rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '.78rem', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>Product</th>

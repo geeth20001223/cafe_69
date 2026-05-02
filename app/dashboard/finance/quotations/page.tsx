@@ -83,7 +83,7 @@ export default function FinanceQuotationsPage() {
       </div>
 
       <div className="card table-wrap">
-        <table>
+        <table style={{ minWidth: '900px' }}>
           <thead><tr><th>Title</th><th>Manager</th><th>Total (LKR)</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody>
             {quotations.map(q => (

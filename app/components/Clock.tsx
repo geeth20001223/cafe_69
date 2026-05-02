@@ -32,7 +32,7 @@ export default function Clock() {
         marginTop: '4px', 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: 'center', 
+        justifyContent: 'flex-end', 
         gap: '6px',
         textTransform: 'uppercase'
       }}>

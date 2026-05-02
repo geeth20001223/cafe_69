@@ -91,7 +91,7 @@ export default function ProductsPage() {
       </div>
 
       <div className="card table-wrap">
-        <table>
+        <table style={{ minWidth: '900px' }}>
           <thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             {products.map(p => {

@@ -290,7 +290,14 @@ body {
 .table-wrap {
   overflow-x: auto;
   width: 100%;
+  transform: rotateX(180deg); /* Move scrollbar to top */
+  -ms-overflow-style: auto;
 }
+
+.table-wrap table {
+  transform: rotateX(180deg); /* Flip content back */
+}
+
 
 table {
   width: 100%;
