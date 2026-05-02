@@ -294,5 +294,5 @@ export default function MyPageClient() {
 
 ```powershell
 npm run dev        # Start dev server (Turbopack) → localhost:3000
-npx tsc --noEmit   # Type-check (ignore the pre-existing supabase error in api/login)
+npx tsc --noEmit   # Type-check
 ```
