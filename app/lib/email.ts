@@ -79,7 +79,7 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
         </div>
 
         <div style="text-align: center; margin-bottom: 12px;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/force?to=/dashboard/inventory/alerts"
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://cafe-69.vercel.app')}/api/auth/force?to=/dashboard/inventory/alerts"
              style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">
             🔗 View Inventory
           </a>

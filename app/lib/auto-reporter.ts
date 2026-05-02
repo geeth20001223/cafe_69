@@ -60,7 +60,7 @@ export async function checkAndAutoReport() {
 export async function triggerCombinedReport(sessionType: string, date: string, triggeredBy: string = 'System') {
   try {
     // 1. Sales Report
-    const salesRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/session-close`, {
+    const salesRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://cafe-69.vercel.app')}/api/session-close`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({
@@ -72,7 +72,7 @@ export async function triggerCombinedReport(sessionType: string, date: string, t
     });
 
     // 2. Inventory Report
-    const invRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/reports`, {
+    const invRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://cafe-69.vercel.app')}/api/reports`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({

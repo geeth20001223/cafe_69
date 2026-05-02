@@ -85,7 +85,7 @@ function buildInventoryEmailHtml(reportTitle: string, data: any): string {
     <!-- Footer -->
     <div style="background:#f8fafc;padding:32px;border-top:1px solid #e2e8f0;text-align:center;">
       <div style="margin-bottom:20px;">
-        <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/force?to=/dashboard/inventory/reports" 
+        <a href="${process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://cafe-69.vercel.app')}/api/auth/force?to=/dashboard/inventory/reports" 
            style="background:#4f46e5;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;box-shadow:0 2px 4px rgba(79,70,229,0.2);">
           🔐 View Detailed Report in POS
         </a>
