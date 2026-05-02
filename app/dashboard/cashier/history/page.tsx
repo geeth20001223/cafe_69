@@ -46,6 +46,7 @@ export default function SalesHistoryPage() {
       <p>Receipt #${bill.id} · ${bill.session_type} session</p>
       <p>${now}</p>
       ${bill.customer_name ? `<p>Customer: ${bill.customer_name}</p>` : ''}
+      ${bill.customer_phone ? `<p>Mobile: ${bill.customer_phone}</p>` : ''}
       <hr>
       <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
       <tbody>${rows}</tbody></table>
@@ -129,7 +130,10 @@ export default function SalesHistoryPage() {
               <tr key={s.id}>
                 <td style={{ color: 'var(--text-muted)', fontWeight: 600 }}>#{s.id}</td>
                 <td><span className={`badge badge-${s.session_type}`}>{s.session_type}</span></td>
-                <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.customer_name || '—'}</td>
+                <td style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                  <div>{s.customer_name || '—'}</div>
+                  {s.customer_phone && <div style={{ fontSize: '.7rem', color: 'var(--text-muted)' }}>📱 {s.customer_phone}</div>}
+                </td>
                 <td><span className="badge badge-pending">{s.payment_method}</span></td>
                 <td style={{ color: 'var(--text-muted)' }}>{s.item_count} items</td>
                 <td style={{ fontWeight: 700, color: 'var(--success)', textAlign: 'right' }}>{s.total_amount.toFixed(2)}</td>
@@ -150,8 +154,14 @@ export default function SalesHistoryPage() {
             <h2 style={{ fontWeight: 700, marginBottom: '1rem' }}>Sale #{detail.id}</h2>
             <div style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginBottom: '.75rem' }}>
               <span className={`badge badge-${detail.session_type}`}>{detail.session_type}</span>
-              &nbsp; {detail.payment_method} &nbsp; {detail.created_at?.slice(0, 16)}
+               &nbsp; {detail.payment_method} &nbsp; {detail.created_at?.slice(0, 16)}
             </div>
+            {(detail.customer_name || detail.customer_phone) && (
+              <div style={{ background: 'var(--bg-secondary)', padding: '.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '.85rem' }}>
+                {detail.customer_name && <div><strong>Customer:</strong> {detail.customer_name}</div>}
+                {detail.customer_phone && <div><strong>Mobile:</strong> {detail.customer_phone}</div>}
+              </div>
+            )}
             {detail.items?.map((item: any) => (
               <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.875rem', padding: '.3rem 0', borderBottom: '1px solid rgba(42,42,58,.5)' }}>
                 <span>{item.product_name} × {item.quantity}</span>

@@ -25,7 +25,8 @@ export async function GET(req: NextRequest) {
   if (search) { query += ' AND (p.name LIKE ? OR p.description LIKE ?)'; args.push(`%${search}%`, `%${search}%`); }
   query += ' ORDER BY p.name ASC';
 
-  const products = db.prepare(query).all(...args);
+  const result = await db.execute({ sql: query, args });
+  const products = result.rows;
   return NextResponse.json({ products });
 }
 
@@ -48,38 +49,47 @@ export async function POST(req: NextRequest) {
   const sPrice = 0;
 
   const db = getDb();
-  const result = db.prepare(`
-    INSERT INTO products (name, category_id, cost_price, selling_price, quantity, unit, low_stock_threshold, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    name,
-    category_id || null,
-    cPrice,
-    sPrice,
-    parseFloat(quantity || 0),
-    unit || 'pcs',
-    parseFloat(low_stock_threshold || 10),
-    description || null
-  ) as any;
+  const result = await db.execute({
+    sql: `
+      INSERT INTO products (name, category_id, cost_price, selling_price, quantity, unit, low_stock_threshold, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    args: [
+      name,
+      category_id || null,
+      cPrice,
+      sPrice,
+      parseFloat(quantity || 0),
+      unit || 'pcs',
+      parseFloat(low_stock_threshold || 10),
+      description || null
+    ]
+  });
 
+  const lastId = Number(result.lastInsertRowid);
   // Check if low stock alert needed
-  checkAndCreateAlert(db, result.lastInsertRowid as number);
+  await checkAndCreateAlert(db, lastId);
 
-  return NextResponse.json({ success: true, id: result.lastInsertRowid });
+  return NextResponse.json({ success: true, id: lastId });
 }
 
-function checkAndCreateAlert(db: any, productId: number) {
-  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId) as any;
+async function checkAndCreateAlert(db: any, productId: number) {
+  const result = await db.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [productId] });
+  const product = result.rows[0] as any;
   if (product && product.quantity <= product.low_stock_threshold) {
     // Check if alert already exists (unread)
-    const existing = db.prepare(
-      'SELECT id FROM stock_alerts WHERE product_id = ? AND is_read = 0'
-    ).get(productId);
-    if (!existing) {
-      db.prepare(`
-        INSERT INTO stock_alerts (product_id, alert_type, message)
-        VALUES (?, 'low_stock', ?)
-      `).run(productId, `Low stock alert: "${product.name}" has ${product.quantity} ${product.unit} remaining (threshold: ${product.low_stock_threshold})`);
+    const existingRes = await db.execute({
+      sql: 'SELECT id FROM stock_alerts WHERE product_id = ? AND is_read = 0',
+      args: [productId]
+    });
+    if (existingRes.rows.length === 0) {
+      await db.execute({
+        sql: `
+          INSERT INTO stock_alerts (product_id, alert_type, message)
+          VALUES (?, 'low_stock', ?)
+        `,
+        args: [productId, `Low stock alert: "${product.name}" has ${product.quantity} ${product.unit} remaining (threshold: ${product.low_stock_threshold})`]
+      });
     }
   }
 }

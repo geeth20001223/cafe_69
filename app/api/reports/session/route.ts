@@ -18,19 +18,27 @@ export async function POST(req: NextRequest) {
   const db = getDb();
   const startDate = start_time.split('T')[0];
 
-  const salesData = db.prepare(`
-    SELECT s.*, u.name as cashier_name FROM sales s
-    LEFT JOIN users u ON s.cashier_id = u.id
-    WHERE session_type = ? AND DATE(created_at) = ?
-  `).all(session_type, startDate) as any[];
+  const salesRes = await db.execute({
+    sql: `
+      SELECT s.*, u.name as cashier_name FROM sales s
+      LEFT JOIN users u ON s.cashier_id = u.id
+      WHERE session_type = ? AND DATE(created_at) = ?
+    `,
+    args: [session_type, startDate]
+  });
+  const salesData = salesRes.rows as any[];
 
-  const items = db.prepare(`
-    SELECT si.product_name, SUM(si.quantity) as qty, SUM(si.subtotal) as total
-    FROM sale_items si
-    LEFT JOIN sales s ON si.sale_id = s.id
-    WHERE s.session_type = ? AND DATE(s.created_at) = ?
-    GROUP BY si.product_name ORDER BY total DESC
-  `).all(session_type, startDate);
+  const itemsRes = await db.execute({
+    sql: `
+      SELECT si.product_name, SUM(si.quantity) as qty, SUM(si.subtotal) as total
+      FROM sale_items si
+      LEFT JOIN sales s ON si.sale_id = s.id
+      WHERE s.session_type = ? AND DATE(s.created_at) = ?
+      GROUP BY si.product_name ORDER BY total DESC
+    `,
+    args: [session_type, startDate]
+  });
+  const items = itemsRes.rows;
 
   const total_sales = salesData.reduce((s, sale) => s + sale.total_amount, 0);
 
@@ -43,12 +51,15 @@ export async function POST(req: NextRequest) {
     }
   };
 
-  const result = db.prepare(`
-    INSERT INTO session_reports (session_type, start_time, end_time, total_sales, total_transactions, data_json, sent_to_finance)
-    VALUES (?, ?, ?, ?, ?, ?, 1)
-  `).run(session_type, start_time, end_time, total_sales, salesData.length, JSON.stringify(data)) as any;
+  const result = await db.execute({
+    sql: `
+      INSERT INTO session_reports (session_type, start_time, end_time, total_sales, total_transactions, data_json, sent_to_finance)
+      VALUES (?, ?, ?, ?, ?, ?, 1)
+    `,
+    args: [session_type, start_time, end_time, total_sales, salesData.length, JSON.stringify(data)]
+  });
 
-  return NextResponse.json({ success: true, id: result.lastInsertRowid, total_sales, transactions: salesData.length });
+  return NextResponse.json({ success: true, id: Number(result.lastInsertRowid), total_sales, transactions: salesData.length });
 }
 
 export async function GET(req: NextRequest) {
@@ -56,6 +67,7 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const db = getDb();
-  const reports = db.prepare('SELECT * FROM session_reports ORDER BY created_at DESC LIMIT 30').all();
+  const reportsRes = await db.execute('SELECT * FROM session_reports ORDER BY created_at DESC LIMIT 30');
+  const reports = reportsRes.rows;
   return NextResponse.json({ reports });
 }

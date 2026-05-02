@@ -7,11 +7,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
   const db = getDb();
-  const product = db.prepare(`
-    SELECT p.*, c.name as category_name
-    FROM products p LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.id = ?
-  `).get(id);
+  const result = await db.execute({
+    sql: `
+      SELECT p.*, c.name as category_name
+      FROM products p LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ?
+    `,
+    args: [id]
+  });
+  const product = result.rows[0];
   if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json({ product });
 }
@@ -47,13 +51,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       vals.push(numFields.includes(key) ? parseFloat(body[key]) : body[key]);
     }
   }
-  fields.push('updated_at = datetime(\'now\')');
+  fields.push("updated_at = datetime('now', 'localtime')");
   vals.push(id);
 
-  db.prepare(`UPDATE products SET ${fields.join(', ')} WHERE id = ?`).run(...vals);
+  await db.execute({
+    sql: `UPDATE products SET ${fields.join(', ')} WHERE id = ?`,
+    args: vals
+  });
 
   // Re-check alerts after update
-  checkAndCreateAlert(db, Number(id));
+  await checkAndCreateAlert(db, Number(id));
 
   return NextResponse.json({ success: true });
 }
@@ -66,25 +73,33 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
   const { id } = await params;
   const db = getDb();
-  db.prepare('UPDATE products SET status = ? WHERE id = ?').run('inactive', id);
+  await db.execute({
+    sql: "UPDATE products SET status = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
+    args: ['inactive', id]
+  });
   return NextResponse.json({ success: true });
 }
 
-function checkAndCreateAlert(db: any, productId: number) {
-  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId) as any;
+async function checkAndCreateAlert(db: any, productId: number) {
+  const result = await db.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [productId] });
+  const product = result.rows[0] as any;
   if (!product) return;
   if (product.quantity <= product.low_stock_threshold) {
-    const existing = db.prepare(
-      'SELECT id FROM stock_alerts WHERE product_id = ? AND is_read = 0'
-    ).get(productId);
-    if (!existing) {
-      db.prepare(`
-        INSERT INTO stock_alerts (product_id, alert_type, message)
-        VALUES (?, 'low_stock', ?)
-      `).run(productId, `Low stock: "${product.name}" has ${product.quantity} ${product.unit} remaining (threshold: ${product.low_stock_threshold})`);
+    const existingRes = await db.execute({
+      sql: 'SELECT id FROM stock_alerts WHERE product_id = ? AND is_read = 0',
+      args: [productId]
+    });
+    if (existingRes.rows.length === 0) {
+      await db.execute({
+        sql: `
+          INSERT INTO stock_alerts (product_id, alert_type, message, created_at)
+          VALUES (?, 'low_stock', ?, datetime('now', 'localtime'))
+        `,
+        args: [productId, `Low stock: "${product.name}" has ${product.quantity} ${product.unit} remaining (threshold: ${product.low_stock_threshold})`]
+      });
     }
   } else {
     // Clear old unread alerts if stock is replenished
-    db.prepare('UPDATE stock_alerts SET is_read = 1 WHERE product_id = ? AND is_read = 0').run(productId);
+    await db.execute({ sql: 'UPDATE stock_alerts SET is_read = 1 WHERE product_id = ? AND is_read = 0', args: [productId] });
   }
 }

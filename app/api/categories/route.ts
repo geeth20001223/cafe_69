@@ -7,7 +7,8 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const db = getDb();
-  const cats = db.prepare('SELECT * FROM categories ORDER BY name ASC').all();
+  const result = await db.execute('SELECT * FROM categories ORDER BY name ASC');
+  const cats = result.rows;
   return NextResponse.json({ categories: cats });
 }
 
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest) {
   if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
 
   const db = getDb();
-  const result = db.prepare('INSERT INTO categories (name, description) VALUES (?, ?)').run(name, description || null) as any;
-  return NextResponse.json({ success: true, id: result.lastInsertRowid });
+  const result = await db.execute({
+    sql: 'INSERT INTO categories (name, description) VALUES (?, ?)',
+    args: [name, description || null]
+  });
+  return NextResponse.json({ success: true, id: Number(result.lastInsertRowid) });
 }

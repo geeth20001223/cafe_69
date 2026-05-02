@@ -15,7 +15,8 @@ export async function checkAndAutoReport() {
   const db = getDb();
   
   // Find the last session report
-  const lastReport = db.prepare('SELECT * FROM session_reports ORDER BY id DESC LIMIT 1').get() as any;
+  const lastReportRes = await db.execute('SELECT * FROM session_reports ORDER BY id DESC LIMIT 1');
+  const lastReport = lastReportRes.rows[0] as any;
   
   if (!lastReport) return; // No reports yet
 
@@ -23,11 +24,15 @@ export async function checkAndAutoReport() {
   // Example: If it's now 'lunch' (7am-4pm), the last report should be 'night' from yesterday/today
   const expectedLastSession = currentSession === 'lunch' ? 'night' : 'lunch';
   
-  const lastSessionReport = db.prepare(`
-    SELECT * FROM session_reports 
-    WHERE session_type = ? 
-    ORDER BY created_at DESC LIMIT 1
-  `).get(expectedLastSession) as any;
+  const lastSessionReportRes = await db.execute({
+    sql: `
+      SELECT * FROM session_reports 
+      WHERE session_type = ? 
+      ORDER BY created_at DESC LIMIT 1
+    `,
+    args: [expectedLastSession]
+  });
+  const lastSessionReport = lastSessionReportRes.rows[0] as any;
 
   if (!lastSessionReport) {
     // If we've never reported this session type, we might want to skip or force it

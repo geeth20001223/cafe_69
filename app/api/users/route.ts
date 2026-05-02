@@ -9,7 +9,8 @@ export async function GET(req: NextRequest) {
   if (session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const db = getDb();
-  const users = db.prepare('SELECT id, name, email, role, is_active, created_at FROM users ORDER BY created_at DESC').all();
+  const result = await db.execute('SELECT id, name, email, role, is_active, created_at FROM users ORDER BY created_at DESC');
+  const users = result.rows;
   return NextResponse.json({ users });
 }
 
@@ -28,14 +29,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
     const db = getDb();
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-    if (existing) return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
-
+    const existingRes = await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email] });
+    if (existingRes.rows.length > 0) return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
+ 
     const hash = bcrypt.hashSync(password, 10);
-    const result = db.prepare(
-      'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)'
-    ).run(name, email, hash, role) as any;
-    return NextResponse.json({ success: true, id: result.lastInsertRowid });
+    const result = await db.execute({
+      sql: 'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
+      args: [name, email, hash, role]
+    });
+    return NextResponse.json({ success: true, id: Number(result.lastInsertRowid) });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

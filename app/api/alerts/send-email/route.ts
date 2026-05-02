@@ -18,12 +18,16 @@ export async function POST(req: NextRequest) {
     const db = getDb();
 
     // Fetch full alert details including product info
-    const alert = db.prepare(`
-    SELECT sa.*, p.name as product_name, p.quantity, p.unit, p.low_stock_threshold
-    FROM stock_alerts sa
-    LEFT JOIN products p ON sa.product_id = p.id
-    WHERE sa.id = ?
-  `).get(alertId) as any;
+    const alertRes = await db.execute({
+      sql: `
+        SELECT sa.*, p.name as product_name, p.quantity, p.unit, p.low_stock_threshold
+        FROM stock_alerts sa
+        LEFT JOIN products p ON sa.product_id = p.id
+        WHERE sa.id = ?
+      `,
+      args: [alertId]
+    });
+    const alert = alertRes.rows[0] as any;
 
     if (!alert) {
         return NextResponse.json({ error: 'Alert not found' }, { status: 404 });

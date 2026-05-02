@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getDb } from './db';
 
 /** Creates a reusable Gmail transporter using App Password credentials */
 function createTransporter() {
@@ -22,14 +23,18 @@ export interface StockAlertEmailPayload {
 
 /** Sends a low-stock Gmail alert to the stock manager */
 export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Promise<{ success: boolean; error?: string }> {
-  const managerEmail = process.env.STOCK_MANAGER_EMAIL;
+  const db = getDb();
+  const managersRes = await db.execute(
+    "SELECT email FROM users WHERE role = 'inventory_manager' AND is_active = 1"
+  );
+  const managerEmails = managersRes.rows.map(m => String(m.email)).join(', ');
   const senderEmail = process.env.GMAIL_USER;
 
   if (!senderEmail || !process.env.GMAIL_APP_PASSWORD) {
     return { success: false, error: 'Gmail credentials are not configured in .env.local' };
   }
-  if (!managerEmail) {
-    return { success: false, error: 'STOCK_MANAGER_EMAIL is not configured in .env.local' };
+  if (!managerEmails) {
+    return { success: false, error: 'No active Inventory Managers found in the database to receive the alert.' };
   }
 
   const { productName, quantity, unit, threshold, alertMessage, createdAt } = payload;
@@ -73,9 +78,8 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
           <div style="color: #d1d5db; font-size: 14px;">${alertMessage}</div>
         </div>
 
-        <!-- CTA -->
         <div style="text-align: center; margin-bottom: 12px;">
-          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/inventory/products"
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/force?to=/dashboard/inventory/alerts"
              style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">
             🔗 View Inventory
           </a>
@@ -93,7 +97,7 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
     const transporter = createTransporter();
     await transporter.sendMail({
       from: `"Cafe 69 IMS 🏪" <${senderEmail}>`,
-      to: managerEmail,
+      to: managerEmails,
       subject: `⚠️ Low Stock Alert: ${productName} (${quantity} ${unit} remaining)`,
       html: htmlBody,
       text: `LOW STOCK ALERT\n\nProduct: ${productName}\nCurrent Stock: ${quantity} ${unit}\nMin. Threshold: ${threshold} ${unit}\n\n${alertMessage}`,

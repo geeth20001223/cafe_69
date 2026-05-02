@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
 
   query += ' GROUP BY s.id ORDER BY s.created_at DESC';
 
-  const sales = db.prepare(query).all(...args);
+  const result = await db.execute({ sql: query, args });
+  const sales = result.rows;
   return NextResponse.json({ sales });
 }
 
@@ -75,49 +76,71 @@ export async function POST(req: NextRequest) {
   }
   total = Math.max(0, total - discount);
 
-  const insertSale = db.transaction(() => {
-    const saleResult = db.prepare(`
-      INSERT INTO sales (cashier_id, session_type, total_amount, discount_amount, payment_method, customer_name, customer_phone, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(session.id, sessionType, total, discount, payment_method, customer_name || null, customer_phone || null, notes || null) as any;
+  try {
+    const saleItemsQueries: any[] = [];
+    const stockUpdateQueries: any[] = [];
+    const alertQueries: any[] = [];
 
-    const saleId = saleResult.lastInsertRowid;
-
+    // First, fetch and verify all products
     for (const item of items) {
-      const product = db.prepare('SELECT * FROM products WHERE id = ?').get(item.product_id) as any;
+      const productRes = await db.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [item.product_id] });
+      const product = productRes.rows[0] as any;
       if (!product) throw new Error(`Product ${item.product_id} not found`);
       if (product.quantity < item.quantity) {
         throw new Error(`Insufficient stock for "${product.name}". Available: ${product.quantity}`);
       }
 
-      db.prepare(`
-        INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, cost_price, subtotal)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(saleId, item.product_id, product.name, item.quantity, item.unit_price, product.cost_price, item.unit_price * item.quantity);
-
-      // Deduct stock
       const newQty = product.quantity - parseFloat(item.quantity);
-      db.prepare('UPDATE products SET quantity = ?, updated_at = datetime(\'now\') WHERE id = ?').run(newQty, item.product_id);
+      
+      // Prepare item insert
+      saleItemsQueries.push({
+        sql: `INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, cost_price, subtotal)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [null, item.product_id, product.name, item.quantity, item.unit_price, product.cost_price, item.unit_price * item.quantity]
+      });
 
-      // Check low stock
+      // Prepare stock update
+      stockUpdateQueries.push({
+        sql: "UPDATE products SET quantity = ?, updated_at = datetime('now', 'localtime') WHERE id = ?",
+        args: [newQty, item.product_id]
+      });
+
+      // Prepare low stock alert if needed
       if (newQty <= product.low_stock_threshold) {
-        const existing = db.prepare('SELECT id FROM stock_alerts WHERE product_id = ? AND is_read = 0').get(item.product_id);
-        if (!existing) {
-          db.prepare(`
-            INSERT INTO stock_alerts (product_id, alert_type, message)
-            VALUES (?, 'low_stock', ?)
-          `).run(item.product_id, `Low stock: "${product.name}" has ${newQty} ${product.unit} remaining`);
+        const existingRes = await db.execute({ sql: 'SELECT id FROM stock_alerts WHERE product_id = ? AND is_read = 0', args: [item.product_id] });
+        if (existingRes.rows.length === 0) {
+          alertQueries.push({
+            sql: "INSERT INTO stock_alerts (product_id, alert_type, message) VALUES (?, 'low_stock', ?)",
+            args: [item.product_id, `Low stock: "${product.name}" has ${newQty} ${product.unit} remaining`]
+          });
         }
       }
     }
 
-    return saleId;
-  });
+    // Now execute all in a batch or sequence
+    const saleResult = await db.execute({
+      sql: `INSERT INTO sales (cashier_id, session_type, total_amount, discount_amount, payment_method, customer_name, customer_phone, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [session.id, sessionType, total, discount, payment_method, customer_name || null, customer_phone || null, notes || null]
+    });
 
-  try {
-    const saleId = insertSale();
+    const saleId = Number(saleResult.lastInsertRowid);
+
+    // Update items queries with the new saleId
+    const finalQueries = [
+      ...saleItemsQueries.map(q => ({ ...q, args: [saleId, ...q.args.slice(1)] })),
+      ...stockUpdateQueries,
+      ...alertQueries
+    ];
+
+    await db.batch(finalQueries, "write");
+
+    const { touchSync } = await import('@/app/lib/db');
+    await touchSync();
+
     return NextResponse.json({ success: true, saleId, total });
   } catch (e: any) {
+    console.error(e);
     return NextResponse.json({ error: e.message }, { status: 400 });
   }
 }

@@ -171,13 +171,17 @@ export async function POST(req: NextRequest) {
   }
 
   // 1. Fetch Sales Data
-  const salesData = database.prepare(`
-    SELECT s.*, u.name as cashier_name
-    FROM sales s
-    LEFT JOIN users u ON s.cashier_id = u.id
-    WHERE s.created_at BETWEEN ? AND ? 
-    AND s.status = 'completed'
-  `).all(startTime, endTime) as any[];
+  const salesRes = await database.execute({
+    sql: `
+      SELECT s.*, u.name as cashier_name
+      FROM sales s
+      LEFT JOIN users u ON s.cashier_id = u.id
+      WHERE s.created_at BETWEEN ? AND ? 
+      AND s.status = 'completed'
+    `,
+    args: [startTime, endTime]
+  });
+  const salesData = salesRes.rows as any[];
 
   sales = salesData;
   totalRevenue = sales.reduce((s: number, s2: any) => s + s2.total_amount, 0);
@@ -188,14 +192,28 @@ export async function POST(req: NextRequest) {
   sessionType = sType;
   date = businessDay;
 
-  // 2. Fetch Inventory Data (Snapshot)
-  const products = database.prepare(`
+  // 2. Fetch Product Sales Summary
+  const itemsSummaryRes = await database.execute({
+    sql: `
+      SELECT si.product_name, SUM(si.quantity) as qty, SUM(si.subtotal) as total
+      FROM sale_items si
+      JOIN sales s ON si.sale_id = s.id
+      WHERE s.created_at BETWEEN ? AND ? AND s.status = 'completed'
+      GROUP BY si.product_name ORDER BY total DESC
+    `,
+    args: [startTime, endTime]
+  });
+  const itemsSummary = itemsSummaryRes.rows;
+
+  // 3. Fetch Inventory Data (Snapshot)
+  const productsRes = await database.execute(`
     SELECT p.*, c.name as category_name,
            (SELECT requested_qty FROM stock_alerts sa WHERE sa.product_id = p.id AND sa.status = 'approved' ORDER BY sa.approved_at DESC LIMIT 1) as last_restock_qty,
            (SELECT approved_at FROM stock_alerts sa WHERE sa.product_id = p.id AND sa.status = 'approved' ORDER BY sa.approved_at DESC LIMIT 1) as last_restock_date
     FROM products p LEFT JOIN categories c ON p.category_id = c.id
     WHERE p.status = 'active' ORDER BY c.name, p.name
-  `).all();
+  `);
+  const products = productsRes.rows;
 
   const inventoryData = {
     generated_at: now.toISOString(),
@@ -208,47 +226,63 @@ export async function POST(req: NextRequest) {
     }
   };
 
-  // 3. Save Session Report to DB
+  const finalDataJson = {
+    ...body,
+    session_type: sessionType,
+    date: date,
+    total_sales: totalRevenue,
+    total_transactions: totalTx,
+    by_payment: {
+      cash: cashSales,
+      card: cardSales
+    },
+    items_summary: itemsSummary,
+    inventory: inventoryData,
+    sales: salesData
+  };
+
+  // 4. Save Session Report to DB
   try {
-    database.prepare(`
-      INSERT INTO session_reports (session_type, start_time, end_time, total_sales, total_transactions, data_json, sent_to_finance)
-      VALUES (?, ?, ?, ?, ?, ?, 0)
-    `).run(
-      sessionType,
-      startTime,
-      endTime,
-      totalRevenue,
-      totalTx,
-      JSON.stringify({ ...body, sales, inventory: inventoryData })
-    );
+    await database.execute({
+      sql: `
+        INSERT INTO session_reports (session_type, start_time, end_time, total_sales, total_transactions, data_json, sent_to_finance)
+        VALUES (?, ?, ?, ?, ?, ?, 0)
+      `,
+      args: [
+        sessionType,
+        startTime,
+        endTime,
+        totalRevenue,
+        totalTx,
+        JSON.stringify(finalDataJson)
+      ]
+    });
   } catch (dbErr) {
     console.error('[session-close] DB error:', dbErr);
   }
 
   // 4. Recipients
-  let recipients: string[] = [];
-  const envEmail = process.env.FINANCE_MANAGER_EMAIL?.trim();
-  if (envEmail) {
-    recipients = [envEmail];
-  } else {
-    const managers = database.prepare(
-      "SELECT email FROM users WHERE role = 'finance_manager' AND is_active = 1"
-    ).all() as { email: string }[];
-    recipients = managers.map(m => m.email);
-  }
+  const managersRes = await database.execute(
+    "SELECT email FROM users WHERE role = 'finance_manager' AND is_active = 1"
+  );
+  const recipients = managersRes.rows.map(m => String(m.email));
 
   if (!recipients.length) {
     return NextResponse.json({ success: true, emailSent: false, reason: 'No recipients' });
   }
 
   // 5. Build Combined Email
-  const productSales = database.prepare(`
-    SELECT si.product_name, SUM(si.quantity) as total_quantity, SUM(si.subtotal) as total_revenue
-    FROM sale_items si
-    JOIN sales s ON si.sale_id = s.id
-    WHERE s.created_at BETWEEN ? AND ? AND s.status = 'completed'
-    GROUP BY si.product_name ORDER BY total_revenue DESC
-  `).all(startTime, endTime);
+  const productSalesRes = await database.execute({
+    sql: `
+      SELECT si.product_name, SUM(si.quantity) as total_quantity, SUM(si.subtotal) as total_revenue
+      FROM sale_items si
+      JOIN sales s ON si.sale_id = s.id
+      WHERE s.created_at BETWEEN ? AND ? AND s.status = 'completed'
+      GROUP BY si.product_name ORDER BY total_revenue DESC
+    `,
+    args: [startTime, endTime]
+  });
+  const productSales = productSalesRes.rows;
 
   const reportObj = {
     sessionType, date, generated: now.toLocaleString('en-LK'), cashierName: session.name,
@@ -289,9 +323,10 @@ export async function POST(req: NextRequest) {
       attachments
     });
 
-    database.prepare(
-      'UPDATE session_reports SET sent_to_finance = 1 WHERE session_type = ? AND start_time = ?'
-    ).run(sessionType, startTime);
+    await database.execute({
+      sql: 'UPDATE session_reports SET sent_to_finance = 1 WHERE session_type = ? AND start_time = ?',
+      args: [sessionType, startTime]
+    });
 
     return NextResponse.json({ success: true, emailSent: true, sentTo: recipients });
   } catch (err: any) {

@@ -21,7 +21,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (!fields.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   vals.push(id);
-  db.prepare(`UPDATE categories SET ${fields.join(', ')} WHERE id = ?`).run(...vals);
+  await db.execute({
+    sql: `UPDATE categories SET ${fields.join(', ')} WHERE id = ?`,
+    args: vals
+  });
   return NextResponse.json({ success: true });
 }
 
@@ -34,6 +37,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const { id } = await params;
   const db = getDb();
-  db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+  await db.execute({ sql: 'DELETE FROM categories WHERE id = ?', args: [id] });
   return NextResponse.json({ success: true });
 }

@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
   }
   query += ' ORDER BY q.created_at DESC';
 
-  const quotations = db.prepare(query).all(...args);
+  const result = await db.execute({ sql: query, args });
+  const quotations = result.rows;
   return NextResponse.json({ quotations });
 }
 
@@ -47,10 +48,28 @@ export async function POST(req: NextRequest) {
   const total = items.reduce((sum: number, i: any) => sum + (parseFloat(i.unit_price) * parseFloat(i.quantity)), 0);
 
   const db = getDb();
-  const result = db.prepare(`
-    INSERT INTO quotations (manager_id, title, items_json, total, notes)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(session.id, title || 'Quotation', JSON.stringify(items), total, notes || null) as any;
+  const result = await db.execute({
+    sql: `
+      INSERT INTO quotations (manager_id, title, items_json, total, notes, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
+    `,
+    args: [session.id, title || 'Quotation', JSON.stringify(items), total, notes || null]
+  });
 
-  return NextResponse.json({ success: true, id: result.lastInsertRowid });
+  return NextResponse.json({ success: true, id: Number(result.lastInsertRowid) });
+}
+
+export async function PUT(req: NextRequest) {
+  const session = await getSessionFromRequest(req);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id, markRead } = await req.json();
+  const db = getDb();
+
+  if (markRead && id) {
+    await db.execute({ sql: 'UPDATE quotations SET is_read = 1 WHERE id = ?', args: [id] });
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
 }

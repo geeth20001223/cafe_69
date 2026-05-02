@@ -5,19 +5,28 @@ export default function FinanceQuotationsPage() {
   const [quotations, setQuotations] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState('pending');
   const [detail, setDetail] = useState<any>(null);
+  const [approvalNotes, setApprovalNotes] = useState('');
   const [processing, setProcessing] = useState(false);
-
+ 
   const load = async () => {
     const params = filterStatus ? `?status=${filterStatus}` : '';
     const res = await fetch('/api/quotations' + params);
     if (res.ok) { const d = await res.json(); setQuotations(d.quotations); }
   };
-  useEffect(() => { load(); }, [filterStatus]);
-
+  useEffect(() => { 
+    load(); 
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, [filterStatus]);
+ 
   async function decide(id: number, status: 'approved' | 'rejected') {
     setProcessing(true);
-    await fetch(`/api/quotations/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
-    setDetail(null); load(); setProcessing(false);
+    await fetch(`/api/quotations/${id}`, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ status, approval_notes: approvalNotes }) 
+    });
+    setDetail(null); setApprovalNotes(''); load(); setProcessing(false);
   }
 
   function printQuotation(q: any) {
@@ -46,7 +55,7 @@ export default function FinanceQuotationsPage() {
       <h1>☕ Cafe 69 — Quotation Review</h1>
       <div class="meta">
         <strong>${q.title}</strong><br>
-        Submitted by: ${q.manager_name || '—'} · Date: ${(q.created_at || '').slice(0, 10)}<br>
+        Submitted by: ${q.manager_name || '—'} · Date: ${q.created_at?.replace('T', ' ').slice(0, 19)}<br>
         Printed: ${now}<br>
         Status: <span class="status status-${q.status}">${q.status.toUpperCase()}</span>
         ${q.approver_name ? ` · Reviewed by: ${q.approver_name}` : ''}
@@ -83,7 +92,7 @@ export default function FinanceQuotationsPage() {
                 <td style={{ color: 'var(--text-secondary)' }}>{q.manager_name}</td>
                 <td style={{ color: 'var(--accent)', fontWeight: 700 }}>{parseFloat(q.total).toFixed(2)}</td>
                 <td><span className={`badge badge-${q.status}`}>{q.status}</span></td>
-                <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{q.created_at?.slice(0, 10)}</td>
+                <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{q.created_at?.replace('T', ' ').slice(0, 19)}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '.4rem' }}>
                     <button className="btn btn-secondary btn-sm" onClick={() => setDetail(q)}>Review</button>
@@ -105,7 +114,7 @@ export default function FinanceQuotationsPage() {
               <span className={`badge badge-${detail.status}`}>{detail.status}</span>
             </div>
             <div style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-              By: {detail.manager_name} · {detail.created_at?.slice(0, 10)}
+              By: {detail.manager_name} · {detail.created_at?.replace('T', ' ').slice(0, 19)}
             </div>
             <div className="table-wrap" style={{ marginBottom: '1rem' }}>
               <table>
@@ -126,6 +135,22 @@ export default function FinanceQuotationsPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', fontWeight: 700, fontSize: '1rem', color: 'var(--accent)', marginBottom: '1.25rem' }}>
               Grand Total: LKR {parseFloat(detail.total).toFixed(2)}
             </div>
+
+            {detail.status === 'pending' && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '.8rem', color: 'var(--text-secondary)', marginBottom: '.4rem' }}>
+                  Approval/Rejection Feedback (Reason)
+                </label>
+                <textarea 
+                  className="input" 
+                  style={{ minHeight: 80, resize: 'vertical' }}
+                  placeholder="e.g. Price too high, Approved for next week, etc."
+                  value={approvalNotes}
+                  onChange={e => setApprovalNotes(e.target.value)}
+                />
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '.75rem' }}>
               <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setDetail(null)}>Close</button>
               <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printQuotation(detail)}>🖨️ Print</button>

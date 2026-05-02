@@ -22,10 +22,24 @@ export default function Clock() {
   const sessionColor = session.includes('Lunch') ? 'var(--lunch)' : session.includes('Night') ? 'var(--night)' : 'var(--text-muted)';
 
   return (
-    <div style={{ textAlign: 'right', lineHeight: 1.3 }}>
-      <div style={{ fontSize: '1.1rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>{time}</div>
-      <div style={{ fontSize: '.7rem', color: 'var(--text-muted)' }}>{date}</div>
-      <div style={{ fontSize: '.7rem', color: sessionColor, fontWeight: 600, marginTop: '.1rem' }}>{session}</div>
+    <div style={{ textAlign: 'right', lineHeight: 1.1, minWidth: '180px', zIndex: 30 }}>
+      <div style={{ fontSize: '1.2rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)', letterSpacing: '1px' }}>{time}</div>
+      <div style={{ fontSize: '.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>{date}</div>
+      <div style={{ 
+        fontSize: '.65rem', 
+        color: sessionColor, 
+        fontWeight: 700, 
+        marginTop: '4px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        gap: '6px',
+        textTransform: 'uppercase'
+      }}>
+         <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: sessionColor, boxShadow: `0 0 5px ${sessionColor}` }}></span>
+         {session}
+         <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: sessionColor, boxShadow: `0 0 5px ${sessionColor}` }}></span>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ export default function CashierPOS() {
   const [payment, setPayment] = useState<'cash' | 'card'>('cash');
   const [discount, setDiscount] = useState('0');
   const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [cashGiven, setCashGiven] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -82,13 +83,13 @@ export default function CashierPOS() {
     const items = cart.map(i => ({ product_id: i.product.id, quantity: i.quantity, unit_price: i.product.selling_price }));
     const res = await fetch('/api/sales', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, payment_method: payment, customer_name: customerName, notes, discount_amount: discountAmt }),
+      body: JSON.stringify({ items, payment_method: payment, customer_name: customerName, customer_phone: customerPhone, notes, discount_amount: discountAmt }),
     });
     const d = await res.json();
     if (!res.ok) { setError(d.error); setSubmitting(false); return; }
     const billRes = await fetch(`/api/sales/${d.saleId}`);
     if (billRes.ok) { const bd = await billRes.json(); setLastBill({ ...bd.sale, items: bd.sale.items, change }); }
-    setCart([]); setDiscount('0'); setCustomerName(''); setCashGiven(''); setNotes('');
+    setCart([]); setDiscount('0'); setCustomerName(''); setCustomerPhone(''); setCashGiven(''); setNotes('');
     loadProducts();
     setSubmitting(false);
   }
@@ -116,6 +117,7 @@ export default function CashierPOS() {
       <p>Receipt #${bill.id} · ${bill.session_type} session</p>
       <p>${now}</p>
       ${bill.customer_name ? `<p>Customer: ${bill.customer_name}</p>` : ''}
+      ${bill.customer_phone ? `<p>Mobile: ${bill.customer_phone}</p>` : ''}
       <hr>
       <table><thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead>
       <tbody>${rows}</tbody></table>
@@ -286,8 +288,18 @@ export default function CashierPOS() {
                 <div style={{ fontSize: '.75rem', color: 'var(--accent)' }}>LKR {item.product.selling_price.toFixed(2)}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                <button onClick={() => updateQty(item.product.id, item.quantity - 1)} style={{ background: 'var(--bg-hover)', border: 'none', color: 'var(--text-primary)', width: 24, height: 24, borderRadius: '4px', cursor: 'pointer', fontSize: '.9rem' }}>−</button>
-                <span style={{ fontSize: '.8rem', fontWeight: 600, minWidth: 20, textAlign: 'center' }}>{item.quantity}</span>
+                <button onClick={() => updateQty(item.product.id, Math.max(0, item.quantity - 1))} style={{ background: 'var(--bg-hover)', border: 'none', color: 'var(--text-primary)', width: 24, height: 24, borderRadius: '4px', cursor: 'pointer', fontSize: '.9rem' }}>−</button>
+                <input 
+                  type="number" 
+                  step="any"
+                  value={item.quantity} 
+                  onChange={e => updateQty(item.product.id, parseFloat(e.target.value) || 0)}
+                  style={{ 
+                    background: 'var(--bg-secondary)', border: '1px solid var(--border)', 
+                    color: 'var(--text-primary)', width: 50, height: 24, borderRadius: '4px', 
+                    fontSize: '.8rem', fontWeight: 600, textAlign: 'center', outline: 'none'
+                  }} 
+                />
                 <button onClick={() => updateQty(item.product.id, item.quantity + 1)} disabled={item.quantity >= item.product.quantity} style={{ background: 'var(--bg-hover)', border: 'none', color: 'var(--text-primary)', width: 24, height: 24, borderRadius: '4px', cursor: 'pointer', fontSize: '.9rem' }}>+</button>
               </div>
               <div style={{ fontSize: '.8rem', fontWeight: 600, minWidth: 60, textAlign: 'right' }}>LKR {(item.product.selling_price * item.quantity).toFixed(2)}</div>
@@ -297,7 +309,10 @@ export default function CashierPOS() {
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '.75rem', display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-          <input className="input" style={{ fontSize: '.8rem' }} placeholder="Customer name (optional)" value={customerName} onChange={e => setCustomerName(e.target.value)} />
+          <div style={{ display: 'flex', gap: '.5rem' }}>
+            <input className="input" style={{ fontSize: '.8rem', flex: 1 }} placeholder="Customer name" value={customerName} onChange={e => setCustomerName(e.target.value)} />
+            <input className="input" style={{ fontSize: '.8rem', flex: 1 }} placeholder="Mobile number" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
+          </div>
           <div style={{ display: 'flex', gap: '.5rem' }}>
             <button onClick={() => setPayment('cash')} className={`btn btn-sm ${payment === 'cash' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1 }}>💵 Cash</button>
             <button onClick={() => setPayment('card')} className={`btn btn-sm ${payment === 'card' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1 }}>💳 Card</button>
@@ -332,7 +347,8 @@ export default function CashierPOS() {
               <h2 style={{ fontWeight: 700, marginTop: '.5rem' }}>Payment Successful!</h2>
               <div style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>Bill #{lastBill.id} · {lastBill.session_type} session</div>
             </div>
-            {lastBill.customer_name && <div style={{ textAlign: 'center', fontSize: '.875rem', color: 'var(--text-secondary)', marginBottom: '.75rem' }}>Customer: {lastBill.customer_name}</div>}
+            {lastBill.customer_name && <div style={{ textAlign: 'center', fontSize: '.875rem', color: 'var(--text-secondary)', marginBottom: '.25rem' }}>Customer: {lastBill.customer_name}</div>}
+            {lastBill.customer_phone && <div style={{ textAlign: 'center', fontSize: '.875rem', color: 'var(--text-secondary)', marginBottom: '.75rem' }}>Mobile: {lastBill.customer_phone}</div>}
             <div style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '.75rem 0', margin: '.75rem 0' }}>
               {lastBill.items?.map((item: any) => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.8rem', padding: '.2rem 0' }}>

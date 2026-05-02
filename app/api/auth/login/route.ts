@@ -11,7 +11,11 @@ export async function POST(req: NextRequest) {
     }
 
     const db = getDb();
-    const user = db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1').get(email) as any;
+    const result = await db.execute({
+      sql: 'SELECT * FROM users WHERE email = ? AND is_active = 1',
+      args: [email]
+    });
+    const user = result.rows[0] as any;
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }

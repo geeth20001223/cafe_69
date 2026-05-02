@@ -258,25 +258,77 @@ export default function FinanceReportsPage() {
         );
       })()}
 
-      {tab === 'sessions' && (
-        <div className="card table-wrap">
-          <table>
-            <thead><tr><th>Session</th><th>Start</th><th>End</th><th>Transactions</th><th>Total (LKR)</th></tr></thead>
-            <tbody>
-              {sessionReports.map(r => (
-                <tr key={r.id}>
-                  <td><span className={`badge badge-${r.session_type}`}>{r.session_type}</span></td>
-                  <td style={{ fontSize: '.8rem', color: 'var(--text-secondary)' }}>{r.start_time?.slice(0, 16)}</td>
-                  <td style={{ fontSize: '.8rem', color: 'var(--text-secondary)' }}>{r.end_time?.slice(0, 16)}</td>
-                  <td>{r.total_transactions}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{r.total_sales?.toFixed(2)}</td>
-                </tr>
-              ))}
-              {!sessionReports.length && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No session reports yet</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {tab === 'sessions' && (() => {
+        // Aggregates for sessions
+        const sessionTrend = [...sessionReports].reverse().slice(-10).map(r => ({
+          name: `${r.session_type === 'lunch' ? '☀️' : '🌙'} ${r.start_time?.slice(5, 10)}`,
+          total: r.total_sales,
+          tx: r.total_transactions
+        }));
+
+        const sCash = sessionReports.reduce((s, r) => {
+          const d = JSON.parse(r.data_json || '{}');
+          return s + (d.by_payment?.cash || 0);
+        }, 0);
+        const sCard = sessionReports.reduce((s, r) => {
+          const d = JSON.parse(r.data_json || '{}');
+          return s + (d.by_payment?.card || 0);
+        }, 0);
+
+        const sPie = [
+          { name: 'Cash', value: sCash, color: 'var(--success)' },
+          { name: 'Card', value: sCard, color: 'var(--info)' }
+        ];
+
+        return (
+          <div className="fade-in">
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="card" style={{ height: 320 }}>
+                <h3 style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '1rem', textTransform: 'uppercase' }}>Session Revenue Trend</h3>
+                <ResponsiveContainer width="100%" height="90%">
+                  <BarChart data={sessionTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px' }} />
+                    <Bar dataKey="total" fill="var(--accent)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="card" style={{ height: 320 }}>
+                <h3 style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '1rem', textTransform: 'uppercase' }}>Aggregate Payment Split</h3>
+                <ResponsiveContainer width="100%" height="90%">
+                  <PieChart>
+                    <Pie data={sPie} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                      {sPie.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip />
+                    <Legend verticalAlign="bottom" />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="card table-wrap">
+              <table>
+                <thead><tr><th>Session</th><th>Start</th><th>End</th><th>Transactions</th><th style={{ textAlign: 'right' }}>Total (LKR)</th></tr></thead>
+                <tbody>
+                  {sessionReports.map(r => (
+                    <tr key={r.id}>
+                      <td><span className={`badge badge-${r.session_type}`}>{r.session_type}</span></td>
+                      <td style={{ fontSize: '.85rem', color: 'var(--text-primary)' }}>{r.start_time?.slice(0, 16)}</td>
+                      <td style={{ fontSize: '.85rem', color: 'var(--text-secondary)' }}>{r.end_time?.slice(0, 16)}</td>
+                      <td style={{ fontWeight: 600 }}>{r.total_transactions} tx</td>
+                      <td style={{ fontWeight: 700, color: 'var(--accent)', textAlign: 'right' }}>{r.total_sales?.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {!sessionReports.length && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No session reports yet</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Quick Summary Modal */}
       {selectedReport && (

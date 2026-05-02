@@ -261,7 +261,11 @@ export default function FinanceDashboardClient() {
     setAlertLoading(false);
   }, [alertTab]);
 
-  useEffect(() => { loadStats(); }, [loadStats]);
+  useEffect(() => { 
+    loadStats(); 
+    const interval = setInterval(loadStats, 10000);
+    return () => clearInterval(interval);
+  }, [loadStats]);
   useEffect(() => { loadAlerts(); }, [loadAlerts]);
 
   // ── Actions ─────────────────────────────────────────────────────────────
@@ -323,11 +327,14 @@ export default function FinanceDashboardClient() {
         {[
           { label: "Today's Revenue",   value: `LKR ${todayRevenue.toLocaleString('en-LK',{minimumFractionDigits:2})}`, sub: `${todayCount} transactions`,  icon: '💵', color: '#22c55e' },
           { label: 'Month Revenue',     value: `LKR ${monthRevenue.toLocaleString('en-LK',{minimumFractionDigits:2})}`, sub: 'Current month',              icon: '📈', color: '#3b82f6' },
-          { label: 'Pending Quotations',value: pendingQuotes, sub: 'Awaiting approval',  icon: '📋', color: '#f59e0b' },
+          { label: 'Pending Quotations',value: pendingQuotes, sub: 'Awaiting approval',  icon: '📋', color: '#f59e0b', animate: pendingQuotes > 0 },
           { label: 'Restock Pending',   value: needsApproval, sub: 'Need your approval', icon: '🔁', color: needsApproval > 0 ? '#ef4444' : '#64748b' },
         ].map(s => (
-          <div key={s.label} className="stat-card">
-            <div style={{ fontSize: '1.5rem', marginBottom: '.5rem' }}>{s.icon}</div>
+          <div key={s.label} className={`stat-card ${s.animate ? 'animate-pulse-notification' : ''}`}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '.5rem', position: 'relative', width: 'fit-content' }}>
+              {s.icon}
+              {s.animate && <span className="notification-badge">{s.value}</span>}
+            </div>
             <div style={{ fontSize: '1.3rem', fontWeight: 800, color: s.color }}>{statsLoading ? '…' : s.value}</div>
             <div style={{ fontSize: '.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '.1rem' }}>{s.label}</div>
             <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{s.sub}</div>
@@ -342,7 +349,8 @@ export default function FinanceDashboardClient() {
           { label: 'Sales Reports', href: '/dashboard/finance/reports', icon: '📊', color: '#3b82f6' },
           { label: 'Quotations', href: '/dashboard/finance/quotations', icon: '📋', color: '#f59e0b' },
           { label: 'Session Reports', href: '/dashboard/finance/sessions', icon: '🕐', color: '#8b5cf6' },
-          { label: 'Price List', href: '#price-management', icon: '💲', color: '#10b981' },
+          { label: 'Price List', href: '/dashboard/finance/prices', icon: '💲', color: '#10b981' },
+          { label: 'Restock Request', href: '/dashboard/finance/restock', icon: '🔁', color: '#ef4444' },
         ].map(m => (
           <a
             key={m.label}
@@ -365,8 +373,15 @@ export default function FinanceDashboardClient() {
           >
             <div style={{
               width: '48px', height: '48px', borderRadius: '12px', background: `${m.color}15`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', color: m.color
-            }}>{m.icon}</div>
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', color: m.color,
+              position: 'relative',
+              animation: (m.label === 'Quotations' && pendingQuotes > 0) ? 'notification-pulse 2s infinite ease-in-out' : 'none'
+            }}>
+              {m.icon}
+              {(m.label === 'Quotations' && pendingQuotes > 0) && (
+                <span className="notification-badge">{pendingQuotes}</span>
+              )}
+            </div>
             <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '.9rem' }}>{m.label}</div>
           </a>
         ))}
@@ -448,170 +463,6 @@ export default function FinanceDashboardClient() {
             </table>
           </div>
         )}
-      </div>
-
-      {/* ══ SECTION 2: RESTOCK REQUESTS ══ */}
-      <div className="card" style={{ borderTop: '3px solid var(--accent)' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '.75rem' }}>
-          <div>
-            <h2 style={{ fontWeight: 700, fontSize: '1.1rem' }}>🔁 Restock Requests</h2>
-            <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>
-              Set the restock quantity using +/− and approve or reject each alert
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
-            {needsApproval > 0 && (
-              <div style={{
-                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
-                borderRadius: '8px', padding: '.35rem .85rem',
-                fontSize: '.8rem', color: '#f87171', fontWeight: 700,
-              }}>
-                ⚠️ {needsApproval} pending
-              </div>
-            )}
-            <button className="btn btn-secondary btn-sm" onClick={loadAlerts}>🔄</button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-          {([
-            { key: 'pending',  label: 'Pending',  icon: '⏳', color: '#f59e0b' },
-            { key: 'approved', label: 'Approved', icon: '✅', color: '#22c55e' },
-            { key: 'rejected', label: 'Rejected', icon: '❌', color: '#ef4444' },
-          ] as const).map(tab => (
-            <button key={tab.key} onClick={() => setAlertTab(tab.key)} style={{
-              padding: '.4rem .9rem', borderRadius: '8px', fontSize: '.82rem', fontWeight: 600,
-              border: `1px solid ${alertTab === tab.key ? tab.color : 'var(--border)'}`,
-              background: alertTab === tab.key ? `${tab.color}18` : 'var(--bg-secondary)',
-              color: alertTab === tab.key ? tab.color : 'var(--text-secondary)',
-              cursor: 'pointer', transition: 'all 0.15s',
-            }}>
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Alert list */}
-        {alertLoading ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading…</div>
-        ) : alerts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '.75rem' }}>
-              {alertTab === 'approved' ? '✅' : alertTab === 'rejected' ? '❌' : '📭'}
-            </div>
-            <div style={{ fontWeight: 600 }}>
-              {alertTab === 'pending' ? 'No pending restock alerts' : `No ${alertTab} alerts`}
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {alerts.map(alert => {
-              const isApproved = alert.status === 'approved';
-              const isRejected = alert.status === 'rejected';
-              const isPending  = alert.status === 'pending';
-              const busy       = actionId === alert.id;
-              const currentQty = parseFloat(qtyMap[alert.id] || '0');
-              const borderCol  = isApproved ? '#22c55e' : isRejected ? '#ef4444' : '#f59e0b';
-
-              return (
-                <div key={alert.id} style={{
-                  background: 'var(--bg-secondary)', borderRadius: '12px',
-                  padding: '1.1rem 1.25rem', borderLeft: `4px solid ${borderCol}`,
-                  opacity: isRejected ? 0.75 : 1, transition: 'all 0.2s',
-                }}>
-                  {/* Row 1: Product info */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.4rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 700, fontSize: '1rem' }}>{alert.product_name}</span>
-                    <span style={{ fontSize: '.72rem', background: 'rgba(239,68,68,.15)', color: '#f87171', padding: '.1rem .55rem', borderRadius: '999px', fontWeight: 700 }}>
-                      LOW STOCK
-                    </span>
-                    {/* Status badge */}
-                    <span style={{
-                      fontSize: '.72rem', fontWeight: 700, padding: '.1rem .6rem', borderRadius: '999px',
-                      background: isApproved ? 'rgba(34,197,94,.15)' : isRejected ? 'rgba(239,68,68,.15)' : 'rgba(245,158,11,.15)',
-                      color: isApproved ? '#4ade80' : isRejected ? '#f87171' : '#fbbf24',
-                    }}>
-                      {isApproved ? '✅ Approved' : isRejected ? '❌ Rejected' : '⏳ Pending'}
-                    </span>
-                  </div>
-
-                  {/* Row 2: Stock info */}
-                  <div style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '.85rem' }}>
-                    Current: <strong style={{ color: 'var(--danger)' }}>{alert.quantity} {alert.unit}</strong>
-                    &nbsp;· Min threshold: {alert.low_stock_threshold} {alert.unit}
-                    &nbsp;· {alert.created_at?.slice(0, 10)}
-                  </div>
-
-                  {/* Row 3: Qty stepper + action buttons (pending only) */}
-                  {isPending && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '.2rem' }}>
-                        <span style={{ fontSize: '.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>RESTOCK QUANTITY</span>
-                        <QtyStepper
-                          alertId={alert.id}
-                          unit={alert.unit}
-                          value={qtyMap[alert.id] || ''}
-                          onChange={handleQtyChange}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '.5rem', marginTop: '1.1rem' }}>
-                        <button
-                          className="btn btn-success btn-sm"
-                          onClick={() => approve(alert.id)}
-                          disabled={busy || currentQty <= 0}
-                          style={{ minWidth: 100, fontWeight: 700 }}
-                          title={currentQty <= 0 ? 'Set quantity first' : `Approve +${currentQty} ${alert.unit}`}
-                        >
-                          {busy ? '⏳ …' : '✅ Approve'}
-                        </button>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => reject(alert.id)}
-                          disabled={busy}
-                          style={{ fontWeight: 700 }}
-                        >
-                          ❌ Reject
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Approved / rejected summary */}
-                  {(isApproved || isRejected) && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
-                      padding: '.6rem .9rem', borderRadius: '8px', marginTop: '.1rem',
-                      background: isApproved ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)',
-                      border: `1px solid ${isApproved ? 'rgba(34,197,94,.25)' : 'rgba(239,68,68,.25)'}`,
-                    }}>
-                      {alert.requested_qty && (
-                        <div style={{ fontSize: '.82rem' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>Quantity: </span>
-                          <strong style={{ color: isApproved ? '#4ade80' : '#f87171' }}>+{alert.requested_qty} {alert.unit}</strong>
-                        </div>
-                      )}
-                      <div style={{ fontSize: '.82rem' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{isApproved ? 'Approved' : 'Rejected'} by: </span>
-                        <strong style={{ color: isApproved ? '#4ade80' : '#f87171' }}>{alert.approved_by_name}</strong>
-                      </div>
-                      <div style={{ fontSize: '.78rem', color: 'var(--text-muted)' }}>
-                        {alert.approved_at?.slice(0, 16)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ══ SECTION 3: PRICE MANAGEMENT ══ */}
-      <div id="price-management" style={{ marginTop: '3rem' }}>
-        <PriceManagementPage />
       </div>
     </div>
 

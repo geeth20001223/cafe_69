@@ -1,0 +1,3 @@
+link - libsql://cafe69db-geeth20001223.aws-ap-south-1.turso.io  
+
+1 token - eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzc3Mzc2NDcsImlkIjoiMDE5ZGU5NmItM2QwMS03Y2YyLWE1YWMtNThmZWIzMzIyNTc0IiwicmlkIjoiMjFiMWY0YzctNWNlMi00ZjUzLTllMmUtZjhjZjMyY2I3OWM2In0.F2waSXij_-uUDECyUeonGYpeIm_r_-LiJspTpJl8bX5M7Hu72J3eUKfmXxR32AwvHV_5UefMmjp0CdSDqhSKAw

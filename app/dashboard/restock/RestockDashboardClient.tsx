@@ -42,15 +42,14 @@ export default function RestockDashboardClient() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const params = filter === 'all' ? '' : `?status=${filter}`;
     const [meRes, alertRes] = await Promise.all([
       fetch('/api/auth'),
-      fetch(`/api/alerts${params}`),
+      fetch('/api/alerts'), // Fetch ALL to get correct counts
     ]);
     if (meRes.ok) { const d = await meRes.json(); setMe(d); }
     if (alertRes.ok) { const d = await alertRes.json(); setAlerts(d.alerts || []); }
     setLoading(false);
-  }, [filter]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -97,12 +96,16 @@ export default function RestockDashboardClient() {
   const isInventory = me?.role === 'inventory_manager' || me?.role === 'admin';
   const isFinance = me?.role === 'finance_manager' || me?.role === 'admin';
 
+  // Calculate counts from the full alerts array
   const counts = {
     all: alerts.length,
     pending: alerts.filter(a => a.status === 'pending').length,
     approved: alerts.filter(a => a.status === 'approved').length,
     rejected: alerts.filter(a => a.status === 'rejected').length,
   };
+
+  // Filter alerts for display
+  const displayAlerts = filter === 'all' ? alerts : alerts.filter(a => a.status === filter);
 
   return (
     <div className="fade-in">
@@ -182,7 +185,7 @@ export default function RestockDashboardClient() {
                 color: isActive ? '#000' : 'var(--text-muted)',
                 borderRadius: '999px', padding: '0 .4rem', fontSize: '.7rem', fontWeight: 700,
               }}>
-                {f === 'all' ? alerts.length : counts[f]}
+                {counts[f]}
               </span>
             </button>
           );
@@ -192,14 +195,14 @@ export default function RestockDashboardClient() {
       {/* Alert cards */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>Loading…</div>
-      ) : alerts.length === 0 ? (
+      ) : displayAlerts.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
           <div style={{ fontWeight: 600 }}>No alerts in this category</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.875rem' }}>
-          {alerts.map(alert => {
+          {displayAlerts.map(alert => {
             const cfg = STATUS_CONFIG[alert.status] || STATUS_CONFIG.pending;
             const isPending = alert.status === 'pending';
             const isApproved = alert.status === 'approved';

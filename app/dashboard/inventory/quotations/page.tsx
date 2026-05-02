@@ -18,7 +18,11 @@ export default function QuotationsPage() {
     const res = await fetch('/api/quotations' + params);
     if (res.ok) { const d = await res.json(); setQuotations(d.quotations); }
   };
-  useEffect(() => { load(); }, [filterStatus]);
+  useEffect(() => { 
+    load(); 
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, [filterStatus]);
 
   function addItem() { setItems([...items, { name: '', quantity: 1, unit_price: 0 }]); }
   function removeItem(i: number) { setItems(items.filter((_, idx) => idx !== i)); }
@@ -61,7 +65,7 @@ export default function QuotationsPage() {
       <h1>☕ Cafe 69 — Quotation</h1>
       <div class="meta">
         <strong>${q.title}</strong><br>
-        Submitted by: ${q.manager_name || '—'} · Date: ${(q.created_at || '').slice(0, 10)}<br>
+        Submitted by: ${q.manager_name || '—'} · Date: ${q.created_at?.replace('T', ' ').slice(0, 19)}<br>
         Printed: ${now}<br>
         Status: <span class="status status-${q.status}">${q.status.toUpperCase()}</span>
         ${q.approver_name ? ` · Reviewed by: ${q.approver_name}` : ''}
@@ -77,9 +81,25 @@ export default function QuotationsPage() {
 
   return (
     <div className="fade-in">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>📋 Quotations</h1>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>➕ New Quotation</button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>📜 Quotations Management</h1>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ New Quotation</button>
+      </div>
+
+      {/* Stats Summary */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        {[
+          { label: 'All Quotations', count: quotations.length, color: 'var(--accent)', icon: '📜' },
+          { label: 'Pending', count: quotations.filter(q => q.status === 'pending').length, color: '#f59e0b', icon: '⏳' },
+          { label: 'Approved', count: quotations.filter(q => q.status === 'approved').length, color: '#22c55e', icon: '✅' },
+          { label: 'Rejected', count: quotations.filter(q => q.status === 'rejected').length, color: '#ef4444', icon: '❌' },
+        ].map(s => (
+          <div key={s.label} className="card" style={{ padding: '1rem' }}>
+            <div style={{ fontSize: '1.2rem', marginBottom: '.25rem' }}>{s.icon}</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: s.color }}>{s.count}</div>
+            <div style={{ fontSize: '.75rem', color: 'var(--text-secondary)' }}>{s.label}</div>
+          </div>
+        ))}
       </div>
 
       <div className="card" style={{ marginBottom: '1rem', display: 'flex', gap: '.75rem' }}>
@@ -100,7 +120,7 @@ export default function QuotationsPage() {
                 <td style={{ fontWeight: 500 }}>{q.title}</td>
                 <td style={{ color: 'var(--accent)', fontWeight: 600 }}>{parseFloat(q.total).toFixed(2)}</td>
                 <td><span className={`badge badge-${q.status}`}>{q.status}</span></td>
-                <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{q.created_at?.slice(0, 10)}</td>
+                <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{q.created_at?.replace('T', ' ').slice(0, 19)}</td>
                 <td style={{ color: 'var(--text-secondary)' }}>{q.approver_name || '—'}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '.4rem' }}>
@@ -124,7 +144,7 @@ export default function QuotationsPage() {
               <span className={`badge badge-${detail.status}`}>{detail.status}</span>
             </div>
             <div style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-              Date: {detail.created_at?.slice(0, 10)}
+              Date: {detail.created_at?.replace('T', ' ').slice(0, 19)}
               {detail.approver_name && <span> · Reviewed by: {detail.approver_name}</span>}
             </div>
             <div className="table-wrap" style={{ marginBottom: '1rem' }}>
@@ -146,6 +166,29 @@ export default function QuotationsPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', fontWeight: 700, fontSize: '1rem', color: 'var(--accent)', marginBottom: '1.25rem' }}>
               Grand Total: LKR {parseFloat(detail.total).toFixed(2)}
             </div>
+
+            {detail.approval_notes && (
+              <div style={{ 
+                padding: '1rem', 
+                borderRadius: '8px', 
+                background: detail.status === 'rejected' ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                border: `1px solid ${detail.status === 'rejected' ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}`,
+                marginBottom: '1.25rem'
+              }}>
+                <div style={{ 
+                  fontSize: '.7rem', 
+                  fontWeight: 700, 
+                  textTransform: 'uppercase', 
+                  color: detail.status === 'rejected' ? '#ef4444' : '#22c55e',
+                  marginBottom: '.25rem'
+                }}>
+                  Finance Decision Feedback
+                </div>
+                <div style={{ fontSize: '.85rem', color: 'var(--text-primary)', fontStyle: 'italic' }}>
+                  "{detail.approval_notes}"
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '.75rem' }}>
               <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setDetail(null)}>Close</button>
               <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printQuotation(detail)}>🖨️ Print</button>

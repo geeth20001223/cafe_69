@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Clock from './Clock';
 
 interface NavItem { label: string; href: string; icon: string; }
@@ -40,6 +40,47 @@ export default function Sidebar({ role, name }: SidebarProps) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [pendingQuotes, setPendingQuotes] = useState(0);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+
+  // Fetch notifications
+  useEffect(() => {
+    const load = () => {
+      // Finance / Admin: Quotations pending approval
+      if (role === 'finance_manager' || role === 'admin') {
+        fetch('/api/quotations?status=pending')
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data && data.quotations) setPendingQuotes(data.quotations.length);
+          });
+      }
+      // Inventory / Admin: Quotation reactions (approved/rejected) not yet seen
+      if (role === 'inventory_manager') {
+        fetch('/api/quotations')
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data && data.quotations) {
+              const unreadReactions = data.quotations.filter((q: any) => q.status !== 'pending' && q.is_read === 0);
+              setPendingQuotes(unreadReactions.length);
+            }
+          });
+      }
+      // Inventory / Admin: Alerts
+      if (role === 'inventory_manager' || role === 'admin') {
+        fetch('/api/alerts')
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data && data.alerts) {
+              setUnreadAlerts(data.alerts.filter((a: any) => a.is_read === 0).length);
+            }
+          });
+      }
+    };
+    load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, [role]);
+
   const nav = navByRole[role] || [];
 
   const roleLabels: Record<string, string> = {
@@ -91,14 +132,56 @@ export default function Sidebar({ role, name }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '.75rem .5rem', display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
+      <nav style={{ flex: 1, padding: '.75rem .5rem', display: 'flex', flexDirection: 'column', gap: '.25rem', overflowY: 'auto' }}>
         {nav.map((item, idx) => {
           const isRoot = item.href === `/dashboard/${role}`;
           const isActive = pathname === item.href || (!isRoot && pathname.startsWith(item.href + '/'));
+          
+          let count = 0;
+          if (item.label === 'Quotations') count = pendingQuotes;
+          if (item.label === 'Stock Alerts') count = unreadAlerts;
+          
+          const showBadge = count > 0;
+          const shouldAnimate = showBadge;
+          
           return (
-            <Link key={item.href} href={item.href} className={`sidebar-link ${isActive ? 'active' : ''} fade-in stagger-${(idx % 4) + 1}`}>
+            <Link 
+              key={item.href} 
+              href={item.href} 
+              onClick={async () => {
+                if (role === 'inventory_manager' && item.label === 'Quotations' && pendingQuotes > 0) {
+                  // Mark all unread reactions as read
+                  const res = await fetch('/api/quotations');
+                  if (res.ok) {
+                    const data = await res.json();
+                    const unread = data.quotations.filter((q: any) => q.status !== 'pending' && q.is_read === 0);
+                    await Promise.all(unread.map((q: any) => 
+                      fetch('/api/quotations', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: q.id, markRead: true })
+                      })
+                    ));
+                  }
+                }
+              }}
+              className={`sidebar-link ${isActive ? 'active' : ''} fade-in stagger-${(idx % 4) + 1} ${shouldAnimate ? 'animate-pulse-notification' : ''}`}
+              style={{ position: 'relative' }}
+            >
               <span style={{ fontSize: '1rem', flexShrink: 0 }}>{item.icon}</span>
               {!collapsed && <span>{item.label}</span>}
+              {showBadge && (
+                <span className="notification-badge" style={{ 
+                  top: '50%', 
+                  right: collapsed ? '4px' : '10px', 
+                  transform: 'translateY(-50%)',
+                  fontSize: '0.6rem',
+                  height: '16px',
+                  minWidth: '16px'
+                }}>
+                  {count}
+                </span>
+              )}
             </Link>
           );
         })}

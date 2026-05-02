@@ -57,18 +57,22 @@ const STATUS_CFG = {
 export default function InventoryDashboardClient() {
   const [stats, setStats] = useState<Stats>({ products: 0, categories: 0, lowStock: 0, unreadAlerts: 0, inventoryValue: 0 });
   const [allAlerts, setAllAlerts] = useState<Alert[]>([]);
+  const [recentQuotations, setRecentQuotations] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'no_request'>('pending');
   const [mainTab, setMainTab] = useState<'overview' | 'categories'>('overview');
   const [loading, setLoading] = useState(true);
-
+ 
+  const [syncVersion, setSyncVersion] = useState(0);
+ 
   const load = useCallback(async () => {
     setLoading(true);
-    const [prodRes, catRes, alertRes] = await Promise.all([
+    const [prodRes, catRes, alertRes, qRes] = await Promise.all([
       fetch('/api/products?status=active'),
       fetch('/api/categories'),
-      fetch('/api/alerts'),          // all alerts (no filter)
+      fetch('/api/alerts'),
+      fetch('/api/quotations'),
     ]);
-
+ 
     if (prodRes.ok) {
       const d = await prodRes.json();
       const prods: any[] = d.products || [];
@@ -89,12 +93,57 @@ export default function InventoryDashboardClient() {
       setAllAlerts(alerts);
       setStats(prev => ({ ...prev, unreadAlerts: alerts.filter(a => a.is_read === 0).length }));
     }
+    if (qRes.ok) {
+      const d = await qRes.json();
+      setRecentQuotations(d.quotations || []);
+    }
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const checkSync = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sync/check');
+      if (res.ok) {
+        const { version } = await res.json();
+        if (version > syncVersion) {
+          setSyncVersion(version);
+          await load();
+        }
+      }
+    } catch (e) { console.error('Sync check failed', e); }
+  }, [syncVersion, load]);
 
-  // Classify alerts into tabs
+  const markQuotationRead = async (id: number) => {
+    await fetch('/api/quotations', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, markRead: true })
+    });
+    load();
+  };
+
+  useEffect(() => { 
+    load().then(() => {
+      fetch('/api/sync/check').then(r => r.json()).then(d => setSyncVersion(d.version || 0));
+    });
+    const interval = setInterval(checkSync, 5000); // Pulse check every 5s
+    return () => clearInterval(interval);
+  }, [checkSync]);
+
+  const markTabRead = async (key: keyof typeof classified) => {
+    const unreadIds = classified[key].filter(a => a.is_read === 0).map(a => a.id);
+    if (unreadIds.length === 0) return;
+    
+    await Promise.all(unreadIds.map(id => 
+      fetch('/api/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, markRead: true })
+      })
+    ));
+    load();
+  };
+
   const classified = {
     pending:    allAlerts.filter(a => a.status === 'pending' && a.requested_qty),
     approved:   allAlerts.filter(a => a.status === 'approved'),
@@ -104,6 +153,7 @@ export default function InventoryDashboardClient() {
 
   const tabAlerts = classified[activeTab];
   const cfg = STATUS_CFG[activeTab];
+  const unreadInTab = classified[activeTab].filter(a => a.is_read === 0).length;
 
   return (
     <div className="fade-in">
@@ -124,11 +174,26 @@ export default function InventoryDashboardClient() {
               { label: 'Active Products',  value: stats.products,       icon: '🍽️', color: '#3b82f6' },
               { label: 'Categories',       value: stats.categories,     icon: '🏷️', color: '#8b5cf6' },
               { label: 'Low Stock Items',  value: stats.lowStock,       icon: '⚠️', color: '#ef4444' },
-              { label: 'Unread Alerts',    value: stats.unreadAlerts,   icon: '🔔', color: '#f59e0b' },
+              { 
+                label: 'Unread Alerts',    
+                value: stats.unreadAlerts,   
+                icon: '🔔', 
+                color: '#f59e0b', 
+                animate: stats.unreadAlerts > 0,
+                onClick: () => { setActiveTab('no_request'); document.getElementById('tracker-section')?.scrollIntoView({ behavior: 'smooth' }); }
+              },
               { label: 'Inventory Value',  value: `LKR ${stats.inventoryValue.toLocaleString('en-LK',{minimumFractionDigits:2})}`, icon: '💎', color: '#22c55e' },
             ].map(s => (
-              <div key={s.label} className="stat-card">
-                <div style={{ fontSize: '1.5rem', marginBottom: '.5rem' }}>{s.icon}</div>
+              <div 
+                key={s.label} 
+                className={`stat-card ${s.animate ? 'animate-pulse-notification' : ''}`}
+                onClick={s.onClick}
+                style={{ cursor: s.onClick ? 'pointer' : 'default' }}
+              >
+                <div style={{ fontSize: '1.5rem', marginBottom: '.5rem', position: 'relative', width: 'fit-content' }}>
+                  {s.icon}
+                  {s.animate && <span className="notification-badge">{s.value}</span>}
+                </div>
                 <div style={{ fontSize: '1.3rem', fontWeight: 800, color: s.color }}>{loading ? '…' : s.value}</div>
                 <div style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginTop: '.1rem' }}>{s.label}</div>
               </div>
@@ -136,34 +201,69 @@ export default function InventoryDashboardClient() {
           </div>
 
           {/* ══ RESTOCK STATUS TRACKER ══ */}
-          <div className="card" style={{ borderTop: '3px solid var(--accent)' }}>
+          <div id="tracker-section" className="card" style={{ borderTop: '3px solid var(--accent)' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '.75rem' }}>
               <div>
-                <h2 style={{ fontWeight: 700, fontSize: '1.1rem' }}>📋 Restock Status Tracker</h2>
+                <h2 style={{ fontWeight: 700, fontSize: '1.1rem' }}>📋 Status Trackers</h2>
                 <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>
-                  Track the finance manager's approval decisions on your restock requests
+                  Monitor finance decisions on stock alerts and formal quotations
                 </p>
               </div>
-              <Link href="/dashboard/inventory/alerts" className="btn btn-secondary btn-sm">
-                <span className={stats.unreadAlerts > 0 ? 'animate-bell' : ''}>🔔</span> Manage Alerts
-              </Link>
+              <div style={{ display: 'flex', gap: '.5rem' }}>
+                <Link 
+                  href="/dashboard/inventory/quotations" 
+                  onClick={async () => {
+                    const unread = recentQuotations.filter(q => q.status !== 'pending' && q.is_read === 0);
+                    if (unread.length > 0) {
+                      await Promise.all(unread.map(q => markQuotationRead(q.id)));
+                    }
+                  }}
+                  className={`btn btn-secondary btn-sm ${recentQuotations.some(q => q.status !== 'pending' && q.is_read === 0) ? 'animate-pulse-notification' : ''}`}
+                  style={{ position: 'relative' }}
+                >
+                  📋 Quotations
+                  {recentQuotations.filter(q => q.status !== 'pending' && q.is_read === 0).length > 0 && (
+                    <span className="notification-badge" style={{ top: '-4px', right: '-4px' }}>
+                      {recentQuotations.filter(q => q.status !== 'pending' && q.is_read === 0).length}
+                    </span>
+                  )}
+                </Link>
+                <Link href="/dashboard/inventory/alerts" className={`btn btn-secondary btn-sm ${stats.unreadAlerts > 0 ? 'animate-pulse-notification' : ''}`} style={{ position: 'relative', overflow: 'visible' }}>
+                  <span style={{ fontSize: '1.1rem' }}>🔔</span> 
+                  Alerts
+                  {stats.unreadAlerts > 0 && <span className="notification-badge" style={{ top: '-4px', right: '-4px' }}>{stats.unreadAlerts}</span>}
+                </Link>
+              </div>
             </div>
 
             {/* Summary pills */}
-            <div style={{ display: 'flex', gap: '.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '.5rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
               {(Object.entries(STATUS_CFG) as [keyof typeof STATUS_CFG, typeof STATUS_CFG[keyof typeof STATUS_CFG]][]).map(([key, c]) => {
-                const count = classified[key].length;
+                const alertsInKey = classified[key];
+                const count = alertsInKey.length;
+                const unreadCount = alertsInKey.filter(a => a.is_read === 0).length;
                 const isActive = activeTab === key;
+                const shouldAnimate = unreadCount > 0;
+                
                 return (
-                  <button key={key} onClick={() => setActiveTab(key)} style={{
-                    display: 'flex', alignItems: 'center', gap: '.4rem',
-                    padding: '.45rem 1rem', borderRadius: '8px', fontSize: '.82rem', fontWeight: 600,
-                    border: `1px solid ${isActive ? c.color : 'var(--border)'}`,
-                    background: isActive ? `${c.color}18` : 'var(--bg-secondary)',
-                    color: isActive ? c.color : 'var(--text-secondary)',
-                    cursor: 'pointer', transition: 'all 0.15s',
-                  }}>
+                  <button 
+                    key={key} 
+                    onClick={() => {
+                      setActiveTab(key);
+                      if (unreadCount > 0) markTabRead(key);
+                    }} 
+                    className={shouldAnimate ? 'animate-pulse-notification' : ''}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '.4rem',
+                      padding: '.45rem 1rem', borderRadius: '8px', fontSize: '.82rem', fontWeight: 600,
+                      border: `1px solid ${isActive ? c.color : 'var(--border)'}`,
+                      background: isActive ? `${c.color}18` : 'var(--bg-secondary)',
+                      color: isActive ? c.color : 'var(--text-secondary)',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      position: 'relative'
+                    }}
+                  >
                     {c.icon} {key === 'no_request' ? 'No Request' : key.charAt(0).toUpperCase() + key.slice(1)}
                     <span style={{
                       background: isActive ? c.color : 'var(--border)',
@@ -172,9 +272,20 @@ export default function InventoryDashboardClient() {
                     }}>
                       {count}
                     </span>
+                    {shouldAnimate && <span className="notification-badge" style={{ top: '-6px', right: '-6px' }}>{unreadCount}</span>}
                   </button>
                 );
               })}
+
+              {unreadInTab > 0 && (
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => markTabRead(activeTab)}
+                  style={{ marginLeft: 'auto', fontSize: '.75rem', height: '32px' }}
+                >
+                  ✅ Mark All as Seen
+                </button>
+              )}
             </div>
 
             {/* Status description */}
@@ -250,6 +361,56 @@ export default function InventoryDashboardClient() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* ══ RECENT QUOTATIONS ══ */}
+          <div className="card" style={{ marginTop: '1.5rem', borderTop: '3px solid var(--info)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <h2 style={{ fontWeight: 700, fontSize: '1.1rem' }}>📜 Recent Quotations</h2>
+              <Link href="/dashboard/inventory/quotations" style={{ fontSize: '.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>View All →</Link>
+            </div>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>Loading…</div>
+            ) : recentQuotations.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '.85rem' }}>No recent quotations found</div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Title</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+                  <tbody>
+                    {recentQuotations.slice(0, 5).map(q => {
+                      const isUnreadReaction = q.status !== 'pending' && q.is_read === 0;
+                      return (
+                        <tr key={q.id} className={isUnreadReaction ? 'animate-pulse-notification' : ''}>
+                          <td style={{ fontWeight: 500, fontSize: '.85rem' }}>{q.title}</td>
+                          <td style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '.85rem' }}>LKR {parseFloat(q.total).toFixed(2)}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                              <span className={`badge badge-${q.status}`} style={{ 
+                                fontSize: '.7rem',
+                                animation: isUnreadReaction ? 'notification-pulse 2s infinite ease-in-out' : 'none'
+                              }}>
+                                {q.status}
+                              </span>
+                              {isUnreadReaction && (
+                                <button 
+                                  className="btn btn-secondary btn-sm" 
+                                  style={{ fontSize: '.65rem', padding: '1px 5px', height: '18px' }}
+                                  onClick={() => markQuotationRead(q.id)}
+                                >
+                                  Seen
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '.75rem' }}>{q.created_at?.replace('T', ' ').slice(0, 19)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

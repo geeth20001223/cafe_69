@@ -9,14 +9,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const db = getDb();
 
-  const sale = db.prepare('SELECT s.*, u.name as cashier_name FROM sales s LEFT JOIN users u ON s.cashier_id = u.id WHERE s.id = ?').get(id) as any;
+  const saleRes = await db.execute({
+    sql: 'SELECT s.*, u.name as cashier_name FROM sales s LEFT JOIN users u ON s.cashier_id = u.id WHERE s.id = ?',
+    args: [id]
+  });
+  const sale = saleRes.rows[0] as any;
   if (!sale) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   // Cashiers can only see their own
-  if (session.role === 'cashier' && sale.cashier_id !== session.id) {
+  if (session.role === 'cashier' && Number(sale.cashier_id) !== session.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const items = db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(id);
+  const itemsRes = await db.execute({ sql: 'SELECT * FROM sale_items WHERE sale_id = ?', args: [id] });
+  const items = itemsRes.rows;
   return NextResponse.json({ sale: { ...sale, items } });
 }
