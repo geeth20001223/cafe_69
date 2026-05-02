@@ -64,3 +64,21 @@ export function getSLDateString(date?: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Returns the "Business Date" for the POS.
+ * In a restaurant/cafe, the business day usually follows the shift pattern.
+ * Here, anything before 7:00 AM is considered part of the previous day's night session.
+ */
+export function getBusinessDateString(date?: Date): string {
+  const d = date || getSLTime();
+  const hour = d.getHours();
+  
+  // If it's 00:00 - 06:59, it's technically the previous business day
+  if (hour < 7) {
+    const yesterday = new Date(d);
+    yesterday.setDate(d.getDate() - 1);
+    return getSLDateString(yesterday);
+  }
+  return getSLDateString(d);
+}
+

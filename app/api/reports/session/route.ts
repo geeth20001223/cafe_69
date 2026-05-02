@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     sql: `
       SELECT s.*, u.name as cashier_name FROM sales s
       LEFT JOIN users u ON s.cashier_id = u.id
-      WHERE session_type = ? AND DATE(created_at) = ?
+      WHERE session_type = ? AND DATE(datetime(created_at, '-7 hours')) = ?
     `,
     args: [session_type, startDate]
   });
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       SELECT si.product_name, SUM(si.quantity) as qty, SUM(si.subtotal) as total
       FROM sale_items si
       LEFT JOIN sales s ON si.sale_id = s.id
-      WHERE s.session_type = ? AND DATE(s.created_at) = ?
+      WHERE s.session_type = ? AND DATE(datetime(s.created_at, '-7 hours')) = ?
       GROUP BY si.product_name ORDER BY total DESC
     `,
     args: [session_type, startDate]

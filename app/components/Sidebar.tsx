@@ -44,6 +44,8 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [pendingQuotes, setPendingQuotes] = useState(0);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [unreadRestocks, setUnreadRestocks] = useState(0);
+  const [pendingRestocks, setPendingRestocks] = useState(0);
 
   // Fetch notifications
   useEffect(() => {
@@ -74,6 +76,16 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
           .then(data => {
             if (data && data.alerts) {
               setUnreadAlerts(data.alerts.filter((a: any) => a.is_read === 0).length);
+            }
+          });
+      }
+      if (role === 'finance_manager' || role === 'admin') {
+        fetch('/api/alerts?status=pending')
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data && data.alerts) {
+              setPendingRestocks(data.alerts.length);
+              setUnreadRestocks(data.alerts.filter((a: any) => a.is_read === 0).length);
             }
           });
       }
@@ -133,14 +145,32 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
           let count = 0;
           if (item.label === 'Quotations') count = pendingQuotes;
           if (item.label === 'Stock Alerts') count = unreadAlerts;
+          if (item.label === 'Restock Approval' || item.label === 'Restock Dashboard') count = pendingRestocks;
           
           const showBadge = count > 0;
+          const isPulsing = (item.label === 'Stock Alerts' && unreadAlerts > 0) || 
+                            (item.label === 'Restock Approval' && pendingRestocks > 0) ||
+                            (item.label === 'Quotations' && pendingQuotes > 0);
           
           return (
             <Link 
               key={item.href} 
               href={dynamicHref} 
               onClick={async () => {
+                if (role === 'inventory_manager' && item.label === 'Stock Alerts' && unreadAlerts > 0) {
+                  const res = await fetch('/api/alerts?unread=true');
+                  if (res.ok) {
+                    const data = await res.json();
+                    await Promise.all((data.alerts || []).map((a: any) => 
+                      fetch('/api/alerts', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: a.id, markRead: true })
+                      })
+                    ));
+                    setUnreadAlerts(0);
+                  }
+                }
                 if (role === 'inventory_manager' && item.label === 'Quotations' && pendingQuotes > 0) {
                   const res = await fetch('/api/quotations');
                   if (res.ok) {
@@ -155,9 +185,23 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
                     ));
                   }
                 }
+                if (role === 'finance_manager' && item.label === 'Restock Approval' && unreadRestocks > 0) {
+                  const res = await fetch('/api/alerts?status=pending&unread=true');
+                  if (res.ok) {
+                    const data = await res.json();
+                    await Promise.all((data.alerts || []).map((a: any) => 
+                      fetch('/api/alerts', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: a.id, markRead: true })
+                      })
+                    ));
+                    setUnreadRestocks(0);
+                  }
+                }
                 if (onClose) onClose();
               }}
-              className={`sidebar-link ${isActive ? 'active' : ''} fade-in stagger-${(idx % 4) + 1} ${showBadge ? 'animate-pulse-notification' : ''}`}
+              className={`sidebar-link ${isActive ? 'active' : ''} fade-in stagger-${(idx % 4) + 1} ${isPulsing ? 'animate-pulse-notification' : ''}`}
               style={{ position: 'relative' }}
             >
               <span style={{ fontSize: '1rem', flexShrink: 0 }}>{item.icon}</span>

@@ -29,7 +29,13 @@ export async function GET(req: NextRequest) {
   if (onlyUnread) conditions.push('sa.is_read = 0');
   if (statusFilter) conditions.push(`sa.status = '${statusFilter}'`);
   if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-  query += ' ORDER BY sa.created_at DESC';
+  if (statusFilter === 'pending') {
+    query += ' ORDER BY sa.created_at DESC';
+  } else if (statusFilter === 'approved' || statusFilter === 'rejected') {
+    query += ' ORDER BY sa.approved_at DESC';
+  } else {
+    query += ' ORDER BY sa.created_at DESC';
+  }
 
   const result = await db.execute(query);
   const alerts = result.rows;
@@ -44,9 +50,23 @@ export async function PUT(req: NextRequest) {
   const db = getDb();
   const { touchSync } = await import('@/app/lib/db');
 
-  // Mark read (any role)
+  // Mark read
   if (body.markRead) {
     await db.execute({ sql: 'UPDATE stock_alerts SET is_read = 1 WHERE id = ?', args: [body.id] });
+    await touchSync();
+    return NextResponse.json({ success: true });
+  }
+
+  // Mark all as read for current view
+  if (body.action === 'mark_all_read') {
+    // If finance_manager, mark pending as read
+    if (session.role === 'finance_manager' || session.role === 'admin') {
+      await db.execute("UPDATE stock_alerts SET is_read = 1 WHERE status = 'pending'");
+    }
+    // If inventory_manager, mark approved/rejected as read
+    if (session.role === 'inventory_manager' || session.role === 'admin') {
+      await db.execute("UPDATE stock_alerts SET is_read = 1 WHERE status IN ('approved', 'rejected')");
+    }
     await touchSync();
     return NextResponse.json({ success: true });
   }
@@ -60,7 +80,7 @@ export async function PUT(req: NextRequest) {
     await db.execute({
       sql: `
         UPDATE stock_alerts
-        SET requested_qty = ?, requested_by = ?, status = 'pending'
+        SET requested_qty = ?, requested_by = ?, status = 'pending', is_read = 0
         WHERE id = ?
       `,
       args: [requested_qty, session.id, id]
@@ -89,17 +109,11 @@ export async function PUT(req: NextRequest) {
     const alert = alertRes.rows[0] as any;
     if (!alert) return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
 
-    await db.batch([
-      {
-        sql: `UPDATE stock_alerts SET requested_qty = ?, requested_by = ?, status = 'approved',
-              approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?`,
-        args: [qty, session.id, session.id, id]
-      },
-      {
-        sql: "UPDATE products SET quantity = quantity + ?, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
-        args: [qty, alert.product_id]
-      }
-    ], "write");
+    await db.execute({
+      sql: `UPDATE stock_alerts SET requested_qty = ?, requested_by = ?, status = 'approved',
+            approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes'), is_read = 0 WHERE id = ?`,
+      args: [qty, session.id, session.id, id]
+    });
 
     await touchSync();
 
@@ -125,16 +139,10 @@ export async function PUT(req: NextRequest) {
     if (!alert) return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
     if (!alert.requested_qty) return NextResponse.json({ error: 'No restock request submitted yet' }, { status: 400 });
 
-    await db.batch([
-      {
-        sql: "UPDATE stock_alerts SET status = 'approved', approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
-        args: [session.id, id]
-      },
-      {
-        sql: "UPDATE products SET quantity = quantity + ?, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
-        args: [alert.requested_qty, alert.product_id]
-      }
-    ], "write");
+    await db.execute({
+      sql: "UPDATE stock_alerts SET status = 'approved', approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes'), is_read = 0 WHERE id = ?",
+      args: [session.id, id]
+    });
 
     await touchSync();
 
@@ -156,7 +164,7 @@ export async function PUT(req: NextRequest) {
   if (body.action === 'reject' && ['admin', 'finance_manager'].includes(session.role)) {
     const { id } = body;
     await db.execute({
-      sql: "UPDATE stock_alerts SET status = 'rejected', approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
+      sql: "UPDATE stock_alerts SET status = 'rejected', approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes'), is_read = 0 WHERE id = ?",
       args: [session.id, id]
     });
     await touchSync();
@@ -171,6 +179,31 @@ export async function PUT(req: NextRequest) {
       alertId: id
     }).catch(e => console.error('Notification error:', e));
 
+    return NextResponse.json({ success: true });
+  }
+
+  // Inventory manager: refill (physically add stock after finance approval)
+  if (body.action === 'refill' && ['admin', 'inventory_manager'].includes(session.role)) {
+    const { id } = body;
+    const alertRes = await db.execute({ sql: 'SELECT * FROM stock_alerts WHERE id = ?', args: [id] });
+    const alert = alertRes.rows[0] as any;
+    if (!alert) return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
+    if (alert.status !== 'approved') return NextResponse.json({ error: 'Only approved requests can be refilled' }, { status: 400 });
+
+    const qtyToAdd = alert.requested_qty || 0;
+
+    await db.batch([
+      {
+        sql: "UPDATE products SET quantity = quantity + ?, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
+        args: [qtyToAdd, alert.product_id]
+      },
+      {
+        sql: "DELETE FROM stock_alerts WHERE id = ?",
+        args: [id]
+      }
+    ], "write");
+
+    await touchSync();
     return NextResponse.json({ success: true });
   }
 

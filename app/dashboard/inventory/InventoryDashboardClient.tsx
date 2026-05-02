@@ -61,6 +61,8 @@ export default function InventoryDashboardClient({ urlKey }: { urlKey: string })
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'no_request'>('pending');
   const [mainTab, setMainTab] = useState<'overview' | 'categories'>('overview');
   const [loading, setLoading] = useState(true);
+  const [submittingId, setSubmittingId] = useState<number | null>(null);
+  const [refillingId, setRefillingId] = useState<number | null>(null);
  
   const [syncVersion, setSyncVersion] = useState(0);
  
@@ -92,6 +94,11 @@ export default function InventoryDashboardClient({ urlKey }: { urlKey: string })
       const alerts: Alert[] = d.alerts || [];
       setAllAlerts(alerts);
       setStats(prev => ({ ...prev, unreadAlerts: alerts.filter(a => a.is_read === 0).length }));
+      // Mark as read if viewing non-pending
+      if (activeTab !== 'pending' && alerts.some(a => a.is_read === 0)) {
+        fetch('/api/alerts', { method: 'PUT', body: JSON.stringify({ action: 'mark_all_read' }) });
+        setStats(prev => ({ ...prev, unreadAlerts: 0 }));
+      }
     }
     if (qRes.ok) {
       const d = await qRes.json();
@@ -142,6 +149,33 @@ export default function InventoryDashboardClient({ urlKey }: { urlKey: string })
       })
     ));
     load();
+  };
+
+  const requestRestock = async (alert: Alert) => {
+    const qty = alert.low_stock_threshold;
+    setSubmittingId(alert.id);
+    try {
+      const res = await fetch('/api/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request', id: alert.id, requested_qty: qty })
+      });
+      if (res.ok) await load();
+    } catch (e) { console.error(e); }
+    setSubmittingId(null);
+  };
+
+  const completeRefill = async (alertId: number) => {
+    setRefillingId(alertId);
+    try {
+      const res = await fetch('/api/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'refill', id: alertId })
+      });
+      if (res.ok) await load();
+    } catch (e) { console.error(e); }
+    setRefillingId(null);
   };
 
   const classified = {
@@ -229,7 +263,27 @@ export default function InventoryDashboardClient({ urlKey }: { urlKey: string })
                     </span>
                   )}
                 </Link>
-                <Link href={`/s/${urlKey}/sys.inventory/alerts`} className={`btn btn-secondary btn-sm ${stats.unreadAlerts > 0 ? 'animate-pulse-notification' : ''}`} style={{ position: 'relative', overflow: 'visible' }}>
+                <Link 
+                  href={`/s/${urlKey}/sys.inventory/alerts`} 
+                  onClick={async () => {
+                    if (stats.unreadAlerts > 0) {
+                      const res = await fetch('/api/alerts?unread=true');
+                      if (res.ok) {
+                        const data = await res.json();
+                        await Promise.all((data.alerts || []).map((a: any) => 
+                          fetch('/api/alerts', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: a.id, markRead: true })
+                          })
+                        ));
+                        load();
+                      }
+                    }
+                  }}
+                  className={`btn btn-secondary btn-sm ${stats.unreadAlerts > 0 ? 'animate-pulse-notification' : ''}`} 
+                  style={{ position: 'relative', overflow: 'visible' }}
+                >
                   <span style={{ fontSize: '1.1rem' }}>🔔</span> 
                   Alerts
                   {stats.unreadAlerts > 0 && <span className="notification-badge" style={{ top: '-4px', right: '-4px' }}>{stats.unreadAlerts}</span>}
@@ -348,11 +402,30 @@ export default function InventoryDashboardClient({ urlKey }: { urlKey: string })
                           </div>
                           <div style={{ fontWeight: 700, fontSize: '.88rem', color: cfg.color }}>{a.approved_by_name}</div>
                           <div style={{ fontSize: '.72rem', color: 'var(--text-muted)' }}>{a.approved_at?.slice(0, 16)}</div>
+                          {a.status === 'approved' ? (
+                            <button 
+                              className="btn btn-success btn-sm"
+                              onClick={() => completeRefill(a.id)}
+                              disabled={refillingId === a.id}
+                              style={{ fontSize: '.75rem', padding: '6px 12px', marginTop: '.5rem' }}
+                            >
+                              {refillingId === a.id ? '⏳ Updating...' : '✅ Mark as Refilled'}
+                            </button>
+                          ) : null}
                         </>
                       ) : activeTab === 'pending' ? (
                         <div style={{ fontSize: '.78rem', color: '#f59e0b', fontStyle: 'italic' }}>
                           ⏳ Awaiting finance decision
                         </div>
+                      ) : activeTab === 'no_request' ? (
+                        <button 
+                          onClick={() => !a.requested_qty && requestRestock(a)}
+                          disabled={submittingId === a.id || !!a.requested_qty}
+                          className={`btn ${!!a.requested_qty ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                          style={{ fontSize: '.75rem', padding: '6px 12px', minWidth: '110px' }}
+                        >
+                          {submittingId === a.id ? '⏳ Sending...' : !!a.requested_qty ? '✅ Request Sent' : '🚀 Send Request'}
+                        </button>
                       ) : (
                         <div style={{ fontSize: '.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                           Not yet submitted

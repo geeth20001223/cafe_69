@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { getSLTime, getSLDateString } from '@/app/lib/session';
+import Link from 'next/link';
+import { getSLTime, getSLDateString, getBusinessDateString } from '@/app/lib/session';
 import PriceManagementPage from './prices/page';
 
 // ── Bill Modal ────────────────────────────────────────────────────────────────
@@ -174,7 +175,9 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
   const [todayCount, setTodayCount]       = useState(0);
   const [monthRevenue, setMonthRevenue]   = useState(0);
   const [pendingQuotes, setPendingQuotes] = useState(0);
-  const [bySess, setBySess]               = useState<{ session_type: string; t: number; c: number }[]>([]);
+  const [pendingRestocks, setPendingRestocks] = useState(0);
+  const [unreadRestocks, setUnreadRestocks] = useState(0);
+  const [bySess, setBySess] = useState<{ session_type: string; t: number; c: number }[]>([]);
   const [statsLoading, setStatsLoading]   = useState(true);
 
   // Today's transactions list
@@ -212,13 +215,15 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
   // ── Stats ──────────────────────────────────────────────────────────────
   const loadStats = useCallback(async () => {
     setStatsLoading(true);
-    const today    = getSLDateString();
+    const today    = getBusinessDateString();
     const slNow    = getSLTime();
     const firstDay = getSLDateString(new Date(slNow.getFullYear(), slNow.getMonth(), 1));
-    const [todayRes, monthRes, quotesRes] = await Promise.all([
+    const [todayRes, monthRes, quotesRes, alertsResRaw, unreadResRaw] = await Promise.all([
       fetch(`/api/sales?from=${today}&to=${today}`),
       fetch(`/api/sales?from=${firstDay}&to=${today}`),
       fetch('/api/quotations?status=pending'),
+      fetch('/api/alerts?status=pending'),
+      fetch('/api/alerts?status=pending&unread=true'),
     ]);
     if (todayRes.ok) {
       const d = await todayRes.json();
@@ -242,6 +247,16 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
       const d = await quotesRes.json();
       setPendingQuotes((d.quotations || []).length);
     }
+    
+    const [alertsRes, unreadRes] = await Promise.all([alertsResRaw, unreadResRaw]);
+    if (alertsRes.ok) {
+      const d = await alertsRes.json();
+      setPendingRestocks((d.alerts || []).length);
+    }
+    if (unreadRes.ok) {
+      const d = await unreadRes.json();
+      setUnreadRestocks((d.alerts || []).length);
+    }
     setStatsLoading(false);
   }, []);
 
@@ -253,6 +268,11 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
       const d = await res.json();
       const list: Alert[] = d.alerts || [];
       setAlerts(list);
+      // Mark as read if viewing pending
+      if (alertTab === 'pending' && list.some(a => a.is_read === 0)) {
+        fetch('/api/alerts', { method: 'PUT', body: JSON.stringify({ action: 'mark_all_read' }) });
+        setUnreadRestocks(0);
+      }
       // Pre-fill qty from existing request if present
       const initial: Record<number, string> = {};
       for (const a of list) {
@@ -282,7 +302,7 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
     });
     const d = await res.json();
     res.ok
-      ? showToast('success', `✅ Approved! +${qty} units added to stock`)
+      ? showToast('success', `✅ Approved! Inventory notified to refill stock.`)
       : showToast('error', `❌ ${d.error}`);
     setActionId(null);
     loadAlerts();
@@ -330,7 +350,7 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
           { label: "Today's Revenue",   value: `LKR ${todayRevenue.toLocaleString('en-LK',{minimumFractionDigits:2})}`, sub: `${todayCount} transactions`,  icon: '💵', color: '#22c55e' },
           { label: 'Month Revenue',     value: `LKR ${monthRevenue.toLocaleString('en-LK',{minimumFractionDigits:2})}`, sub: 'Current month',              icon: '📈', color: '#3b82f6' },
           { label: 'Pending Quotations',value: pendingQuotes, sub: 'Awaiting approval',  icon: '📋', color: '#f59e0b', animate: pendingQuotes > 0 },
-          { label: 'Restock Pending',   value: needsApproval, sub: 'Need your approval', icon: '🔁', color: needsApproval > 0 ? '#ef4444' : '#64748b' },
+          { label: 'Restock Pending',   value: pendingRestocks, sub: 'Need your approval', icon: '🔁', color: pendingRestocks > 0 ? '#ef4444' : '#64748b', animate: pendingRestocks > 0 },
         ].map(s => (
           <div key={s.label} className={`stat-card ${s.animate ? 'animate-pulse-notification' : ''}`}>
             <div style={{ fontSize: '1.5rem', marginBottom: '.5rem', position: 'relative', width: 'fit-content' }}>
@@ -354,9 +374,25 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
           { label: 'Price List', href: `/s/${urlKey}/sys.finance/prices`, icon: '💲', color: '#10b981' },
           { label: 'Restock Request', href: `/s/${urlKey}/sys.finance/restock`, icon: '🔁', color: '#ef4444' },
         ].map(m => (
-          <a
+          <Link
             key={m.label}
             href={m.href}
+            onClick={async () => {
+              if (m.label === 'Restock Request' && unreadRestocks > 0) {
+                const res = await fetch('/api/alerts?status=pending&unread=true');
+                if (res.ok) {
+                  const data = await res.json();
+                  await Promise.all((data.alerts || []).map((a: any) => 
+                    fetch('/api/alerts', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ id: a.id, markRead: true })
+                    })
+                  ));
+                  setUnreadRestocks(0);
+                }
+              }
+            }}
             style={{
               textDecoration: 'none', background: 'var(--bg-card)', borderRadius: '16px', padding: '1.5rem',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.75rem',
@@ -373,19 +409,22 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
               e.currentTarget.style.borderColor = 'var(--border)';
             }}
           >
-            <div style={{
+            <div className={(m.label === 'Quotations' && pendingQuotes > 0) || (m.label === 'Restock Request' && pendingRestocks > 0) ? 'animate-pulse-notification' : ''} style={{
               width: '48px', height: '48px', borderRadius: '12px', background: `${m.color}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', color: m.color,
               position: 'relative',
-              animation: (m.label === 'Quotations' && pendingQuotes > 0) ? 'notification-pulse 2s infinite ease-in-out' : 'none'
+              animation: (m.label === 'Quotations' && pendingQuotes > 0) || (m.label === 'Restock Request' && pendingRestocks > 0) ? 'notification-pulse 2s infinite ease-in-out' : 'none'
             }}>
               {m.icon}
               {(m.label === 'Quotations' && pendingQuotes > 0) && (
-                <span className="notification-badge">{pendingQuotes}</span>
+                <span className="notification-badge" style={{ background: '#f59e0b', boxShadow: '0 0 10px rgba(245,158,11,0.5)' }}>{pendingQuotes}</span>
+              )}
+              {(m.label === 'Restock Request' && pendingRestocks > 0) && (
+                <span className="notification-badge" style={{ animation: unreadRestocks > 0 ? 'pulse-ring 1.5s infinite' : 'none' }}>{pendingRestocks}</span>
               )}
             </div>
             <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '.9rem' }}>{m.label}</div>
-          </a>
+          </Link>
         ))}
       </div>
 
@@ -443,7 +482,9 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
                 {todaySales.map(s => (
                   <tr key={s.id}>
                     <td style={{ color: 'var(--text-muted)', fontWeight: 600 }}>#{s.id}</td>
-                    <td style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{s.created_at?.slice(11, 16)}</td>
+                    <td style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
+                       {new Date(s.created_at).toLocaleTimeString('en-LK', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                    </td>
                     <td><span className={`badge badge-${s.session_type}`}>{s.session_type === 'lunch' ? '🌅 Lunch' : '🌙 Night'}</span></td>
                     <td style={{ color: 'var(--text-secondary)' }}>{s.cashier_name || '—'}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>{s.customer_name || '—'}</td>

@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { getSLTime, formatSLTime, formatSLDate, getCurrentSession, getSessionLabel } from '@/app/lib/session';
+import { getSLTime, formatSLTime, formatSLDate, getCurrentSession, getSessionLabel, getBusinessDateString } from '@/app/lib/session';
 
 export default function Clock() {
   const [time, setTime] = useState('');
   const [date, setDate] = useState('');
+  const [bizDate, setBizDate] = useState('');
   const [session, setSession] = useState('');
 
   useEffect(() => {
@@ -12,6 +13,7 @@ export default function Clock() {
       const now = getSLTime();
       setTime(formatSLTime(now));
       setDate(formatSLDate(now));
+      setBizDate(getBusinessDateString(now));
       setSession(getSessionLabel(getCurrentSession()));
     }
     tick();
@@ -25,6 +27,7 @@ export default function Clock() {
     <div style={{ textAlign: 'right', lineHeight: 1.1, minWidth: '180px', zIndex: 30 }}>
       <div style={{ fontSize: '1.2rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)', letterSpacing: '1px' }}>{time}</div>
       <div style={{ fontSize: '.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>{date}</div>
+      <div style={{ fontSize: '.6rem', color: 'var(--accent)', fontWeight: 600, marginTop: '2px' }}>BIZ DATE: {bizDate}</div>
       <div style={{ 
         fontSize: '.65rem', 
         color: sessionColor, 

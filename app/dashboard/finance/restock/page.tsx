@@ -115,7 +115,7 @@ export default function FinanceRestockPage() {
     });
     const d = await res.json();
     if (res.ok) {
-      showToast('success', `✅ Approved! +${qty} units added to stock`);
+      showToast('success', `✅ Approved! Inventory notified to refill stock.`);
       loadAlerts();
     } else {
       showToast('error', `❌ ${d.error}`);
@@ -215,9 +215,9 @@ export default function FinanceRestockPage() {
                         Threshold: {alert.low_stock_threshold} {alert.unit}
                       </div>
                     </div>
-                    <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-                      Created: {new Date(alert.created_at).toLocaleString()}
-                    </div>
+                      <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', textAlign: 'right' }}>
+                        Created: {new Date(alert.created_at).toLocaleString('en-LK', { dateStyle: 'short', timeStyle: 'short' })}
+                      </div>
                   </div>
 
                   {alert.status === 'pending' ? (
@@ -237,7 +237,7 @@ export default function FinanceRestockPage() {
                     <div style={{ display: 'flex', gap: '2rem', padding: '.75rem 1rem', background: 'rgba(0,0,0,0.03)', borderRadius: '8px', fontSize: '.9rem' }}>
                       <div><span style={{ color: 'var(--text-muted)' }}>Quantity:</span> <strong>{alert.requested_qty} {alert.unit}</strong></div>
                       <div><span style={{ color: 'var(--text-muted)' }}>Reviewer:</span> <strong>{alert.approved_by_name}</strong></div>
-                      <div><span style={{ color: 'var(--text-muted)' }}>Date:</span> <strong>{new Date(alert.approved_at || '').toLocaleDateString()}</strong></div>
+                      <div><span style={{ color: 'var(--text-muted)' }}>Date:</span> <strong>{new Date(alert.approved_at || '').toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' })}</strong></div>
                     </div>
                   )}
                 </div>

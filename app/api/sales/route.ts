@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
   } else if (cashierId) {
     query += ' AND s.cashier_id = ?'; args.push(cashierId);
   }
-  if (dateFrom) { query += ' AND DATE(s.created_at) >= ?'; args.push(dateFrom); }
-  if (dateTo) { query += ' AND DATE(s.created_at) <= ?'; args.push(dateTo); }
+  if (dateFrom) { query += " AND DATE(datetime(s.created_at, '-7 hours')) >= ?"; args.push(dateFrom); }
+  if (dateTo) { query += " AND DATE(datetime(s.created_at, '-7 hours')) <= ?"; args.push(dateTo); }
   if (sessionType) { query += ' AND s.session_type = ?'; args.push(sessionType); }
 
   query += ' GROUP BY s.id ORDER BY s.created_at DESC';

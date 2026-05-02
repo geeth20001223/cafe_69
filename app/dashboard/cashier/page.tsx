@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSLTime, getCurrentSession, getSLDateString } from '@/app/lib/session';
+import { getSLTime, getCurrentSession, getSLDateString, getBusinessDateString } from '@/app/lib/session';
 
 interface Product { id: number; name: string; category_name?: string; selling_price: number; quantity: number; unit: string; }
 interface CartItem { product: Product; quantity: number; }
@@ -137,7 +137,7 @@ export default function CashierPOS() {
     
     const now = getSLTime();
     const sessionType = getCurrentSession();
-    const today = getSLDateString(now);
+    const today = getBusinessDateString(now);
     
     setSubmitting(true);
     setEmailStatus('sending');

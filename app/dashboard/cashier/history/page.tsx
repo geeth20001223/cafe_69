@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { getBusinessDateString } from '@/app/lib/session';
 
 export default function SalesHistoryPage() {
   const [sales, setSales] = useState<any[]>([]);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getBusinessDateString());
+  const [dateTo, setDateTo] = useState(getBusinessDateString());
   const [sessionFilter, setSessionFilter] = useState('');
   const [detail, setDetail] = useState<any>(null);
 
