@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/app/lib/db';
 import { getSessionFromRequest } from '@/app/lib/auth';
+import { sendStockActionNotification } from '@/app/lib/email';
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
@@ -65,6 +66,18 @@ export async function PUT(req: NextRequest) {
       args: [requested_qty, session.id, id]
     });
     await touchSync();
+
+    // Notify others
+    const pRes = await db.execute({ sql: 'SELECT name FROM products WHERE id = (SELECT product_id FROM stock_alerts WHERE id = ?)', args: [id] });
+    const pName = (pRes.rows[0] as any)?.name || 'Unknown Product';
+    sendStockActionNotification({
+      productName: pName,
+      action: 'requested',
+      performedBy: session.name,
+      quantity: requested_qty,
+      alertId: id
+    }).catch(e => console.error('Notification error:', e));
+
     return NextResponse.json({ success: true });
   }
 
@@ -89,6 +102,18 @@ export async function PUT(req: NextRequest) {
     ], "write");
 
     await touchSync();
+
+    // Notify others
+    const pRes = await db.execute({ sql: 'SELECT name FROM products WHERE id = ?', args: [alert.product_id] });
+    const pName = (pRes.rows[0] as any)?.name || 'Unknown Product';
+    sendStockActionNotification({
+      productName: pName,
+      action: 'approved',
+      performedBy: session.name,
+      quantity: qty,
+      alertId: id
+    }).catch(e => console.error('Notification error:', e));
+
     return NextResponse.json({ success: true });
   }
 
@@ -112,6 +137,18 @@ export async function PUT(req: NextRequest) {
     ], "write");
 
     await touchSync();
+
+    // Notify others
+    const pRes = await db.execute({ sql: 'SELECT name FROM products WHERE id = ?', args: [alert.product_id] });
+    const pName = (pRes.rows[0] as any)?.name || 'Unknown Product';
+    sendStockActionNotification({
+      productName: pName,
+      action: 'approved',
+      performedBy: session.name,
+      quantity: alert.requested_qty,
+      alertId: id
+    }).catch(e => console.error('Notification error:', e));
+
     return NextResponse.json({ success: true });
   }
 
@@ -123,6 +160,17 @@ export async function PUT(req: NextRequest) {
       args: [session.id, id]
     });
     await touchSync();
+
+    // Notify others
+    const pRes = await db.execute({ sql: 'SELECT name FROM products WHERE id = (SELECT product_id FROM stock_alerts WHERE id = ?)', args: [id] });
+    const pName = (pRes.rows[0] as any)?.name || 'Unknown Product';
+    sendStockActionNotification({
+      productName: pName,
+      action: 'rejected',
+      performedBy: session.name,
+      alertId: id
+    }).catch(e => console.error('Notification error:', e));
+
     return NextResponse.json({ success: true });
   }
 

@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
         threshold: alert.low_stock_threshold,
         alertMessage: alert.message,
         createdAt: alert.created_at,
+        senderName: session.name,
     });
 
     if (!result.success) {

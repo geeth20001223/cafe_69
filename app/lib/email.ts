@@ -19,6 +19,7 @@ export interface StockAlertEmailPayload {
   threshold: number;
   alertMessage: string;
   createdAt?: string;
+  senderName?: string;
 }
 
 /** Sends a low-stock Gmail alert to the stock manager */
@@ -37,14 +38,14 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
     return { success: false, error: 'No active Finance Managers found in the database to receive the alert.' };
   }
 
-  const { productName, quantity, unit, threshold, alertMessage, createdAt } = payload;
+  const { productName, quantity, unit, threshold, alertMessage, createdAt, senderName } = payload;
 
   const htmlBody = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f0f0f; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a2a;">
       <!-- Header -->
       <div style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); padding: 28px 32px;">
         <div style="font-size: 28px; margin-bottom: 8px;">⚠️ Low Stock Alert</div>
-        <div style="color: rgba(255,255,255,0.9); font-size: 14px;">Cafe 69 Inventory Management System</div>
+        <div style="color: rgba(255,255,255,0.9); font-size: 14px;">Cafe 69 Inventory Management System ${senderName ? `· Sent by ${senderName}` : ''}</div>
       </div>
 
       <!-- Body -->
@@ -96,11 +97,11 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
   try {
     const transporter = createTransporter();
     await transporter.sendMail({
-      from: `"Cafe 69 IMS 🏪" <${senderEmail}>`,
+      from: `"${senderName || 'Inventory Manager'} @ Cafe 69" <${senderEmail}>`,
       to: managerEmails,
       subject: `⚠️ Low Stock Alert: ${productName} (${quantity} ${unit} remaining)`,
       html: htmlBody,
-      text: `LOW STOCK ALERT\n\nProduct: ${productName}\nCurrent Stock: ${quantity} ${unit}\nMin. Threshold: ${threshold} ${unit}\n\n${alertMessage}`,
+      text: `LOW STOCK ALERT\n\nProduct: ${productName}\nCurrent Stock: ${quantity} ${unit}\nMin. Threshold: ${threshold} ${unit}\n\n${alertMessage}\n\nSent by: ${senderName || 'Inventory Manager'}`,
     });
     return { success: true };
   } catch (err: any) {
@@ -125,3 +126,72 @@ export async function sendStockAlertEmail(payload: StockAlertEmailPayload): Prom
     return { success: false, error: msg || 'Unknown error sending email' };
   }
 }
+
+export interface StockActionEmailPayload {
+  productName: string;
+  action: 'approved' | 'rejected' | 'requested';
+  performedBy: string;
+  quantity?: number;
+  unit?: string;
+  alertId: number;
+}
+
+/** Notifies all relevant managers (Inventory + Finance) when a stock action is performed */
+export async function sendStockActionNotification(payload: StockActionEmailPayload): Promise<{ success: boolean; error?: string }> {
+  const db = getDb();
+  
+  // Get all active Inventory and Finance managers
+  const recipientsRes = await db.execute(
+    "SELECT email FROM users WHERE role IN ('inventory_manager', 'finance_manager') AND is_active = 1"
+  );
+  const recipientEmails = recipientsRes.rows.map(r => String(r.email)).join(', ');
+  const senderEmail = process.env.GMAIL_USER;
+
+  if (!senderEmail || !process.env.GMAIL_APP_PASSWORD || !recipientEmails) {
+    return { success: false, error: 'Configuration missing or no recipients found.' };
+  }
+
+  const { productName, action, performedBy, quantity, unit, alertId } = payload;
+  const statusColor = action === 'approved' ? '#22c55e' : action === 'rejected' ? '#ef4444' : '#f59e0b';
+  const actionText = action.toUpperCase();
+
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f0f0f; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a2a;">
+      <div style="background: ${statusColor}; padding: 20px 32px; color: white;">
+        <div style="font-size: 20px; font-weight: 700;">Stock Action: ${actionText}</div>
+      </div>
+      <div style="padding: 32px; color: #e5e7eb;">
+        <p style="font-size: 16px; margin: 0 0 20px;">
+          The following action was performed on a stock alert:
+        </p>
+        <div style="background: #1a1a2e; border-radius: 8px; padding: 20px; border: 1px solid #2a2a2a;">
+          <div style="margin-bottom: 10px;"><strong>Product:</strong> ${productName}</div>
+          <div style="margin-bottom: 10px;"><strong>Action:</strong> <span style="color: ${statusColor}; font-weight: 700;">${actionText}</span></div>
+          <div style="margin-bottom: 10px;"><strong>By:</strong> ${performedBy}</div>
+          ${quantity ? `<div style="margin-bottom: 10px;"><strong>Quantity:</strong> ${quantity} ${unit}</div>` : ''}
+        </div>
+        <div style="margin-top: 24px; text-align: center;">
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://cafe-69.vercel.app')}/dashboard/inventory/alerts"
+             style="display: inline-block; background: #2a2a2a; color: white; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; border: 1px solid #444;">
+            View Details in Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: `"Cafe 69 System" <${senderEmail}>`,
+      to: recipientEmails,
+      subject: `[Stock Action] ${actionText}: ${productName}`,
+      html: htmlBody,
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.error('[Email] Action notification failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
