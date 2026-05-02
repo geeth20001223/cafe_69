@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
   const sessionType = searchParams.get('session');
   const cashierId = searchParams.get('cashier');
 
-  // Cashiers can only see their own sales
   let query = `
     SELECT s.*, u.name as cashier_name,
            COUNT(si.id) as item_count
@@ -36,8 +35,11 @@ export async function GET(req: NextRequest) {
 
   query += ' GROUP BY s.id ORDER BY s.created_at DESC';
 
+  console.log('[Sales API] GET', { dateFrom, dateTo, sessionType });
   const result = await db.execute({ sql: query, args });
   const sales = result.rows;
+  console.log('[Sales API] Found:', sales.length);
+  
   return NextResponse.json({ sales });
 }
 
@@ -56,6 +58,7 @@ export async function POST(req: NextRequest) {
   }
 
   const sessionType = getCurrentSession();
+  console.log('[Sales API] POST - Session:', sessionType);
   const db = getDb();
   
   // ── Auto-Report Check ──────────────────────────────────────────────────────
@@ -125,6 +128,7 @@ export async function POST(req: NextRequest) {
     });
 
     const saleId = Number(saleResult.lastInsertRowid);
+    console.log('[Sales API] POST - Sale Created:', saleId);
 
     // Update items queries with the new saleId
     const finalQueries = [

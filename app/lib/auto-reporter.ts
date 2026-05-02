@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { getCurrentSession, getSLTime } from './session';
+import { getCurrentSession, getSLTime, getSLDateString } from './session';
 import { transporter } from './mailer';
 
 /**
@@ -10,7 +10,7 @@ import { transporter } from './mailer';
 export async function checkAndAutoReport() {
   const now = getSLTime();
   const currentSession = getCurrentSession();
-  const today = now.toISOString().split('T')[0];
+  const today = getSLDateString(now);
   
   const db = getDb();
   

@@ -191,7 +191,18 @@ export default function AdminDashboardClient() {
           </div>
         </div>
 
-        <div className="table-wrap">
+        <div className="table-scrollbar-top" style={{ overflowX: 'auto', marginBottom: '-6px' }} 
+             onScroll={(e) => {
+               const table = e.currentTarget.nextElementSibling;
+               if (table) table.scrollLeft = e.currentTarget.scrollLeft;
+             }}>
+          <div style={{ width: '900px', height: '1px' }}></div>
+        </div>
+
+        <div className="table-wrap" onScroll={(e) => {
+               const scrollbar = e.currentTarget.previousElementSibling;
+               if (scrollbar) scrollbar.scrollLeft = e.currentTarget.scrollLeft;
+             }}>
           <table style={{ minWidth: '900px', borderCollapse: 'separate', borderSpacing: '0 .5rem' }}>
             <thead>
               <tr>
@@ -229,11 +240,17 @@ export default function AdminDashboardClient() {
                   <td style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{u.created_at?.slice(0, 10)}</td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '.4rem', justifyContent: 'flex-end' }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => openEdit(u)} style={{ padding: '0.4rem 0.6rem' }}>✏️ Edit</button>
-                      <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)} style={{ minWidth: '95px', justifyContent: 'center', padding: '0.4rem 0.6rem' }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => openEdit(u)} style={{ padding: '0.45rem 0.75rem', fontSize: '.8rem' }}>✏️ Edit</button>
+                      <button className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`} onClick={() => toggleActive(u)} style={{ minWidth: '95px', justifyContent: 'center', padding: '0.45rem 0.75rem', fontSize: '.8rem' }}>
                         {u.is_active ? 'Deactivate' : 'Activate'}
                       </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)} title="Delete Permanently" style={{ padding: '0.4rem 0.6rem' }}>🗑️</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)} title="Delete Permanently" style={{ 
+                        padding: '0.45rem 0.75rem', 
+                        fontSize: '.8rem',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        color: '#ef4444'
+                      }}>🗑️</button>
                     </div>
                   </td>
                 </tr>

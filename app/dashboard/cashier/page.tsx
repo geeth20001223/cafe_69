@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getSLTime, getCurrentSession, getSLDateString } from '@/app/lib/session';
 
 interface Product { id: number; name: string; category_name?: string; selling_price: number; quantity: number; unit: string; }
 interface CartItem { product: Product; quantity: number; }
@@ -134,9 +135,9 @@ export default function CashierPOS() {
   async function closeSession() {
     if (!window.confirm('Are you sure you want to close this session and send reports to Finance?')) return;
     
-    const now = new Date();
-    const sessionType = now.getHours() >= 7 && now.getHours() < 16 ? 'lunch' : 'night';
-    const today = now.toISOString().split('T')[0];
+    const now = getSLTime();
+    const sessionType = getCurrentSession();
+    const today = getSLDateString(now);
     
     setSubmitting(true);
     setEmailStatus('sending');

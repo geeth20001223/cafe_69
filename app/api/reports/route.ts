@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/app/lib/db';
 import { getSessionFromRequest } from '@/app/lib/auth';
 import { transporter } from '@/app/lib/mailer';
-import { getSLTime } from '@/app/lib/session';
+import { getSLTime, getSLDateString } from '@/app/lib/session';
 import { generateInventoryPDF } from '@/app/lib/pdf-generator';
 
 // ─── HTML email builder for inventory ─────────────────────────────────────────
@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
 
   if (type === 'sales_summary') {
     const slNow = getSLTime();
-    const from = dateFrom || slNow.toISOString().split('T')[0];
+    const from = dateFrom || getSLDateString(slNow);
     const to = dateTo || from;
     const summaryRes = await db.execute({
       sql: `
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     }
   };
 
-  const date = report_date || slNow.toISOString().split('T')[0];
+  const date = report_date || getSLDateString(slNow);
   const finalTitle = title || `Inventory Report - ${date}`;
   const result = await db.execute({
     sql: `

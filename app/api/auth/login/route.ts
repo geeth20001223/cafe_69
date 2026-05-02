@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     });
     res.cookies.set('cafe69_token', token, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === 'production' || req.url.startsWith('https'),
       sameSite: 'lax',
       maxAge: 60 * 60 * 24,
       path: '/',

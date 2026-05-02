@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/app/lib/db';
 import { getSessionFromRequest } from '@/app/lib/auth';
 import { transporter } from '@/app/lib/mailer';
-import { getSLTime } from '@/app/lib/session';
+import { getSLTime, getSLDateString, getCurrentSession } from '@/app/lib/session';
 
 // ─── HTML email builder ───────────────────────────────────────────────────────
 function buildEmailHtml(report: {
@@ -155,8 +155,8 @@ export async function POST(req: NextRequest) {
   
   // Logical Session Range calculation
   const now = getSLTime();
-  const businessDay = date || now.toISOString().split('T')[0];
-  const sType = sessionType || (now.getHours() >= 7 && now.getHours() < 16 ? 'lunch' : 'night');
+  const businessDay = date || getSLDateString(now);
+  const sType = sessionType || getCurrentSession();
 
   let startTime, endTime;
   if (sType === 'lunch') {
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
     const bDayObj = new Date(businessDay);
     const nextDayObj = new Date(bDayObj);
     nextDayObj.setDate(bDayObj.getDate() + 1);
-    const nextDay = nextDayObj.toISOString().split('T')[0];
+    const nextDay = getSLDateString(nextDayObj);
     startTime = `${businessDay} 16:00:00`;
     endTime = `${nextDay} 06:59:59`;
   }

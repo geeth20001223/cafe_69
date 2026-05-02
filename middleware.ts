@@ -14,10 +14,26 @@ async function verifyToken(token: string) {
   }
 }
 
-export async function proxy(req: NextRequest) {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Handle dynamic system routes (/s/[key]/sys.[role]/...)
+  // 1. Root redirect
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/auth.v1', req.url));
+  }
+
+  // 2. Handle /sys.[role] shortcuts
+  if (pathname.startsWith('/sys.')) {
+    const token = req.cookies.get('cafe69_token')?.value;
+    if (!token) return NextResponse.redirect(new URL('/auth.v1', req.url));
+    const session = await verifyToken(token) as any;
+    if (!session || !session.urlKey) return NextResponse.redirect(new URL('/auth.v1', req.url));
+    
+    // Redirect to the obfuscated URL
+    return NextResponse.redirect(new URL(`/s/${session.urlKey}${pathname}`, req.url));
+  }
+
+  // 3. Handle dynamic system routes (/s/[key]/sys.[role]/...)
   if (pathname.startsWith('/s/')) {
     const parts = pathname.split('/');
     if (parts.length < 4) return NextResponse.next();
@@ -48,51 +64,38 @@ export async function proxy(req: NextRequest) {
 
     // Role-based Path Access Control
     const role = session.role;
-    
-    // Admin has access to everything
-    if (role === 'admin') {
-      // Allow through
-    } else {
-      // Role-specific restrictions
-      if (internalRole === 'admin') {
-        return NextResponse.redirect(new URL('/auth.v1', req.url));
-      }
-      
-      if (internalRole === 'cashier' && role !== 'cashier') {
-        return NextResponse.redirect(new URL('/auth.v1', req.url));
-      }
-      
-      if (internalRole === 'inventory' && role !== 'inventory_manager') {
-        return NextResponse.redirect(new URL('/auth.v1', req.url));
-      }
-      
-      if (internalRole === 'finance' && role !== 'finance_manager') {
-        return NextResponse.redirect(new URL('/auth.v1', req.url));
-      }
-      
-      if (internalRole === 'restock' && !['inventory_manager', 'finance_manager'].includes(role)) {
-        return NextResponse.redirect(new URL('/auth.v1', req.url));
-      }
+    if (role !== 'admin') {
+      if (internalRole === 'admin') return NextResponse.redirect(new URL('/auth.v1', req.url));
+      if (internalRole === 'cashier' && role !== 'cashier') return NextResponse.redirect(new URL('/auth.v1', req.url));
+      if (internalRole === 'inventory' && role !== 'inventory_manager') return NextResponse.redirect(new URL('/auth.v1', req.url));
+      if (internalRole === 'finance' && role !== 'finance_manager') return NextResponse.redirect(new URL('/auth.v1', req.url));
     }
 
     const destination = `/dashboard/${internalRole}${subPath ? '/' + subPath : ''}`;
     return NextResponse.rewrite(new URL(destination, req.url));
   }
 
-  // 2. Protect direct access to dashboard routes
+  // 4. Protect direct access to dashboard routes
   if (pathname.startsWith('/dashboard')) {
     const token = req.cookies.get('cafe69_token')?.value;
     if (!token) return NextResponse.redirect(new URL('/auth.v1', req.url));
     
-    const session = await verifyToken(token);
+    const session = await verifyToken(token) as any;
     if (!session) return NextResponse.redirect(new URL('/auth.v1', req.url));
     
-    return NextResponse.next();
+    // If accessing dashboard directly, force a redirect to the masked path
+    const roleMap: Record<string, string> = {
+      admin: 'sys.admin',
+      cashier: 'sys.terminal',
+      inventory_manager: 'sys.inventory',
+      finance_manager: 'sys.finance'
+    };
+    return NextResponse.redirect(new URL(`/s/${session.urlKey}/${roleMap[session.role] || 'sys.admin'}`, req.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/s/:path*', '/dashboard/:path*'],
+  matcher: ['/', '/s/:path*', '/dashboard/:path*', '/sys.:path*'],
 };
