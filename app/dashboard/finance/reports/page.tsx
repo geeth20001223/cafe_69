@@ -129,7 +129,7 @@ export default function FinanceReportsPage() {
 
             <div className="card table-wrap" style={{ height: '350px', overflowY: 'auto' }}>
               <h3 style={{ fontWeight: 600, marginBottom: '.75rem', fontSize: '.9rem' }}>Daily Breakdown</h3>
-              <table>
+              <table style={{ minWidth: '900px' }}>
                 <thead><tr><th>Date</th><th>Session</th><th>Txns</th><th>Cash</th><th>Card</th><th>Total</th></tr></thead>
                 <tbody>
                   {summary.map((r, i) => (
@@ -236,7 +236,7 @@ export default function FinanceReportsPage() {
               <div style={{ marginBottom: '1rem' }}>
                 <h2 style={{ fontWeight: 700, fontSize: '1rem' }}>📜 Report History</h2>
               </div>
-              <table>
+              <table style={{ minWidth: '900px' }}>
                 <thead><tr><th>Title</th><th>Date</th><th>Manager</th><th>Action</th></tr></thead>
                 <tbody>
                   {invReports.map(r => (
@@ -311,7 +311,7 @@ export default function FinanceReportsPage() {
             </div>
 
             <div className="card table-wrap">
-              <table>
+              <table style={{ minWidth: '900px' }}>
                 <thead><tr><th>Session</th><th>Start</th><th>End</th><th>Transactions</th><th style={{ textAlign: 'right' }}>Total (LKR)</th></tr></thead>
                 <tbody>
                   {sessionReports.map(r => (

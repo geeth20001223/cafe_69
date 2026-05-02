@@ -66,7 +66,7 @@ export async function initSchema() {
       customer_phone TEXT,
       notes TEXT,
       status TEXT DEFAULT 'completed',
-      created_at TEXT DEFAULT (datetime('now','localtime'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
     )`,
     `CREATE TABLE IF NOT EXISTS sale_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

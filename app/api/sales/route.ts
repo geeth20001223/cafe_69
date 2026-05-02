@@ -119,8 +119,8 @@ export async function POST(req: NextRequest) {
 
     // Now execute all in a batch or sequence
     const saleResult = await db.execute({
-      sql: `INSERT INTO sales (cashier_id, session_type, total_amount, discount_amount, payment_method, customer_name, customer_phone, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO sales (cashier_id, session_type, total_amount, discount_amount, payment_method, customer_name, customer_phone, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+5 hours', '30 minutes'))`,
       args: [session.id, sessionType, total, discount, payment_method, customer_name || null, customer_phone || null, notes || null]
     });
 
