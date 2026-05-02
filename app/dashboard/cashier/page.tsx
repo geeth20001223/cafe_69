@@ -220,10 +220,10 @@ export default function CashierPOS() {
   }
 
   return (
-    <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1rem', height: 'calc(100vh - 120px)' }}>
+    <div className="fade-in pos-container">
       {/* Left – Products */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
+      <div className="pos-products">
+        <div className="pos-controls">
           <input ref={searchRef} className="input" style={{ flex: '1 1 200px' }} placeholder="🔍 Search products…" value={search} onChange={e => setSearch(e.target.value)} />
           <select className="input" style={{ flex: '0 0 160px' }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
             <option value="">All Categories</option>
@@ -232,9 +232,9 @@ export default function CashierPOS() {
           <button className="btn btn-secondary btn-sm" onClick={closeSession} title="Close current session and generate report">🔒 Close Session</button>
         </div>
 
-        <div style={{ overflowY: 'auto', flex: 1 }}>
+        <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.5rem' }}>
           {!products.length ? (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No products found</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>No products found</div>
           ) : (
             sortedCategories.map((cat, catIdx) => {
               const catProducts = cat === 'Uncategorized' ? uncategorized : categoriesMap.get(cat)!;
@@ -245,24 +245,24 @@ export default function CashierPOS() {
                   <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '.25rem' }}>
                     {cat}
                   </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: '.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: '.75rem' }}>
                     {catProducts.map((p, pIdx) => (
                       <button key={p.id} onClick={() => addToCart(p)} disabled={p.quantity <= 0}
                         className={`fade-in stagger-${((pIdx + catIdx) % 4) + 1}`}
                         style={{ 
                           background: 'var(--bg-card)', border: '1px solid var(--border)', 
-                          borderRadius: '10px', padding: '1rem', textAlign: 'left', 
+                          borderRadius: '10px', padding: '0.75rem', textAlign: 'left', 
                           cursor: p.quantity <= 0 ? 'not-allowed' : 'pointer', 
                           opacity: p.quantity <= 0 ? 0.4 : 1, transition: 'all 0.2s',
                           position: 'relative', overflow: 'hidden'
                         }}
                         onMouseEnter={e => { if (p.quantity > 0) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-                        <div style={{ fontSize: '1.5rem', marginBottom: '.4rem' }}>🍽️</div>
-                        <div style={{ fontWeight: 600, fontSize: '.85rem', color: 'var(--text-primary)', marginBottom: '.2rem' }}>{p.name}</div>
-                        <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.4rem' }}>{p.category_name}</div>
-                        <div style={{ fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}>LKR {p.selling_price.toFixed(2)}</div>
-                        <div style={{ fontSize: '.7rem', color: p.quantity <= 5 ? 'var(--danger)' : 'var(--text-muted)', marginTop: '.2rem' }}>
+                        <div style={{ fontSize: '1.25rem', marginBottom: '.3rem' }}>🍽️</div>
+                        <div style={{ fontWeight: 600, fontSize: '.8rem', color: 'var(--text-primary)', marginBottom: '.1rem', lineHeight: '1.2' }}>{p.name}</div>
+                        <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginBottom: '.3rem' }}>{p.category_name}</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent)' }}>LKR {p.selling_price.toFixed(2)}</div>
+                        <div style={{ fontSize: '.65rem', color: p.quantity <= 5 ? 'var(--danger)' : 'var(--text-muted)', marginTop: '.2rem' }}>
                           Stock: {p.quantity} {p.unit}
                         </div>
                       </button>
@@ -276,7 +276,7 @@ export default function CashierPOS() {
       </div>
 
       {/* Right – Cart */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem', overflow: 'hidden' }}>
+      <div className="pos-cart">
         <h2 style={{ fontWeight: 700, fontSize: '1rem' }}>🛒 Cart ({cart.reduce((s, i) => s + i.quantity, 0)} items)</h2>
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -296,7 +296,7 @@ export default function CashierPOS() {
                   onChange={e => updateQty(item.product.id, parseFloat(e.target.value) || 0)}
                   style={{ 
                     background: 'var(--bg-secondary)', border: '1px solid var(--border)', 
-                    color: 'var(--text-primary)', width: 50, height: 24, borderRadius: '4px', 
+                    color: 'var(--text-primary)', width: 45, height: 24, borderRadius: '4px', 
                     fontSize: '.8rem', fontWeight: 600, textAlign: 'center', outline: 'none'
                   }} 
                 />

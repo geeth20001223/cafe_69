@@ -48,14 +48,17 @@ export default function DashboardLayoutClient({ children, session }: Props) {
           </div>
 
           <div className="header-left">
+            {/* Optional title or breadcrumbs */}
           </div>
 
-          <div style={{ flex: 1 }}></div>
+          <div className="header-center">
+            {/* Can be used for central info if needed */}
+          </div>
 
           <div className="header-right">
-            <div style={{ position: 'relative' }}>
-              <div className="hud-bracket top-right" style={{ right: '-8px', top: '-4px', width: '8px', height: '8px' }}></div>
-              <div className="hud-bracket bottom-right" style={{ right: '-8px', bottom: '-4px', width: '8px', height: '8px' }}></div>
+            <div className="clock-container">
+              <div className="hud-bracket top-right"></div>
+              <div className="hud-bracket bottom-right"></div>
               <Clock />
             </div>
           </div>

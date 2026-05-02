@@ -97,24 +97,14 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
   }
 
   return (
-    <aside style={{
-      width: collapsed ? 64 : 240,
-      minHeight: '100vh',
-      background: 'var(--bg-secondary)',
-      borderRight: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      transition: 'width 0.2s',
-      flexShrink: 0,
-      position: 'sticky',
-      top: 0,
-    }}>
+    <aside className="sidebar" style={{ width: collapsed ? 64 : 240 }}>
       {/* Logo */}
-      <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.75rem', justifyContent: collapsed ? 'center' : 'flex-start' }}>
+      <div className="sidebar-logo" style={{ justifyContent: collapsed ? 'center' : 'flex-start' }}>
         <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>☕</span>
         {!collapsed && <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent)' }}>Cafe 69</span>}
         <button 
           onClick={() => setCollapsed(!collapsed)} 
+          className="sidebar-collapse-btn"
           style={{ 
             marginLeft: collapsed ? '0' : 'auto', 
             background: 'none', 
@@ -123,7 +113,7 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
             cursor: 'pointer', 
             fontSize: '1.2rem',
             padding: '.25rem',
-            display: 'block' 
+            display: collapsed ? 'block' : 'block' 
           }}
           title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
@@ -132,10 +122,9 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '.75rem .5rem', display: 'flex', flexDirection: 'column', gap: '.25rem', overflowY: 'auto' }}>
+      <nav className="sidebar-nav">
         {nav.map((item, idx) => {
           const isRoot = item.href === `/sys.${role}`;
-          // In the UI, the link used will be /s/[urlKey]/[masked_path]
           const dynamicHref = `/s/${urlKey || 'session'}${item.href}`;
           const isActive = pathname === dynamicHref || (!isRoot && pathname.startsWith(dynamicHref + '/'));
           
@@ -144,7 +133,6 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
           if (item.label === 'Stock Alerts') count = unreadAlerts;
           
           const showBadge = count > 0;
-          const shouldAnimate = showBadge;
           
           return (
             <Link 
@@ -152,7 +140,6 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
               href={dynamicHref} 
               onClick={async () => {
                 if (role === 'inventory_manager' && item.label === 'Quotations' && pendingQuotes > 0) {
-                  // Mark all unread reactions as read
                   const res = await fetch('/api/quotations');
                   if (res.ok) {
                     const data = await res.json();
@@ -168,7 +155,7 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
                 }
                 if (onClose) onClose();
               }}
-              className={`sidebar-link ${isActive ? 'active' : ''} fade-in stagger-${(idx % 4) + 1} ${shouldAnimate ? 'animate-pulse-notification' : ''}`}
+              className={`sidebar-link ${isActive ? 'active' : ''} fade-in stagger-${(idx % 4) + 1} ${showBadge ? 'animate-pulse-notification' : ''}`}
               style={{ position: 'relative' }}
             >
               <span style={{ fontSize: '1rem', flexShrink: 0 }}>{item.icon}</span>
@@ -191,7 +178,7 @@ export default function Sidebar({ role, name, urlKey, onClose }: SidebarProps) {
       </nav>
 
       {/* User */}
-      <div style={{ padding: '.75rem', borderTop: '1px solid var(--border)' }}>
+      <div className="sidebar-footer">
         {!collapsed && (
           <div style={{ marginBottom: '.75rem' }}>
             <div style={{ fontSize: '.8rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>

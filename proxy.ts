@@ -1,39 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from './app/lib/auth';
+import { jwtVerify } from 'jose';
 
-const PUBLIC_PATHS = ['/auth.v1', '/api/auth/login', '/_next', '/favicon.ico'];
+const SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'cafe69-super-secret-key-2024-lka'
+);
+
+async function verifyToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, SECRET);
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
-    return NextResponse.next();
-  }
-
-  // 1. Block direct access to internal paths
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/sys.')) {
-    return NextResponse.redirect(new URL('/auth.v1', req.url));
-  }
-
-  // 2. Dynamic Route Handling (/s/[urlKey]/sys.[route])
+  // 1. Handle dynamic system routes (/s/[key]/sys.[role]/...)
   if (pathname.startsWith('/s/')) {
     const parts = pathname.split('/');
-    if (parts.length < 4) return NextResponse.redirect(new URL('/auth.v1', req.url));
+    if (parts.length < 4) return NextResponse.next();
     
     const urlKey = parts[2];
-    const systemPathWithPrefix = parts[3]; // e.g., sys.admin
+    const systemPathWithPrefix = parts[3];
     const systemPath = systemPathWithPrefix.replace('sys.', '');
     const subPath = parts.slice(4).join('/');
 
     const token = req.cookies.get('cafe69_token')?.value;
     if (!token) return NextResponse.redirect(new URL('/auth.v1', req.url));
 
-    const session = await verifyToken(token);
+    const session = await verifyToken(token) as any;
     if (!session || session.urlKey !== urlKey) {
       return NextResponse.redirect(new URL('/auth.v1', req.url));
     }
 
-    // Role-based validation for the path
     const pathMap: Record<string, string> = {
       admin: 'admin',
       terminal: 'cashier',
@@ -43,34 +44,49 @@ export async function proxy(req: NextRequest) {
     };
 
     const internalRole = pathMap[systemPath];
-    if (!internalRole) return NextResponse.redirect(new URL('/auth.v1', req.url));
+    if (!internalRole) return NextResponse.next();
 
-    // Guard access based on session role
+    // Role-based Path Access Control
     const role = session.role;
-    if (internalRole === 'admin' && role !== 'admin') {
-      return NextResponse.redirect(new URL('/auth.v1', req.url));
-    }
-    if (internalRole === 'inventory' && !['admin', 'inventory_manager'].includes(role)) {
-      return NextResponse.redirect(new URL('/auth.v1', req.url));
-    }
-    if (internalRole === 'cashier' && !['admin', 'cashier'].includes(role)) {
-      return NextResponse.redirect(new URL('/auth.v1', req.url));
-    }
-    if (internalRole === 'finance' && !['admin', 'finance_manager'].includes(role)) {
-      return NextResponse.redirect(new URL('/auth.v1', req.url));
+    
+    // Admin has access to everything
+    if (role === 'admin') {
+      // Allow through
+    } else {
+      // Role-specific restrictions
+      if (internalRole === 'admin') {
+        return NextResponse.redirect(new URL('/auth.v1', req.url));
+      }
+      
+      if (internalRole === 'cashier' && role !== 'cashier') {
+        return NextResponse.redirect(new URL('/auth.v1', req.url));
+      }
+      
+      if (internalRole === 'inventory' && role !== 'inventory_manager') {
+        return NextResponse.redirect(new URL('/auth.v1', req.url));
+      }
+      
+      if (internalRole === 'finance' && role !== 'finance_manager') {
+        return NextResponse.redirect(new URL('/auth.v1', req.url));
+      }
+      
+      if (internalRole === 'restock' && !['inventory_manager', 'finance_manager'].includes(role)) {
+        return NextResponse.redirect(new URL('/auth.v1', req.url));
+      }
     }
 
-    // Rewrite to internal dashboard route
     const destination = `/dashboard/${internalRole}${subPath ? '/' + subPath : ''}`;
     return NextResponse.rewrite(new URL(destination, req.url));
   }
 
-  // API protection
-  if (pathname.startsWith('/api/')) {
+  // 2. Protect direct access to dashboard routes
+  if (pathname.startsWith('/dashboard')) {
     const token = req.cookies.get('cafe69_token')?.value;
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const payload = await verifyToken(token);
-    if (!payload) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    if (!token) return NextResponse.redirect(new URL('/auth.v1', req.url));
+    
+    const session = await verifyToken(token);
+    if (!session) return NextResponse.redirect(new URL('/auth.v1', req.url));
+    
     return NextResponse.next();
   }
 
@@ -78,5 +94,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/s/:path*', '/dashboard/:path*'],
 };
