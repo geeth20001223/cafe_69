@@ -11,6 +11,7 @@ export interface JWTPayload {
   name: string;
   email: string;
   role: 'admin' | 'inventory_manager' | 'cashier' | 'finance_manager';
+  urlKey?: string;
 }
 
 export async function signToken(payload: JWTPayload): Promise<string> {

@@ -25,16 +25,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
+    const urlKey = Math.random().toString(36).substring(2, 10);
+
     const token = await signToken({
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
+      urlKey
     });
 
     const res = NextResponse.json({
       success: true,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, urlKey },
     });
     res.cookies.set('cafe69_token', token, {
       httpOnly: true,

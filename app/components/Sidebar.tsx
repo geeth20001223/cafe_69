@@ -33,9 +33,9 @@ const navByRole: Record<string, NavItem[]> = {
   ],
 };
 
-interface SidebarProps { role: string; name: string; }
+interface SidebarProps { role: string; name: string; urlKey?: string; }
 
-export default function Sidebar({ role, name }: SidebarProps) {
+export default function Sidebar({ role, name, urlKey }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -135,7 +135,9 @@ export default function Sidebar({ role, name }: SidebarProps) {
       <nav style={{ flex: 1, padding: '.75rem .5rem', display: 'flex', flexDirection: 'column', gap: '.25rem', overflowY: 'auto' }}>
         {nav.map((item, idx) => {
           const isRoot = item.href === `/sys.${role}`;
-          const isActive = pathname === item.href || (!isRoot && pathname.startsWith(item.href + '/'));
+          // In the UI, the link used will be /s/[urlKey]/[masked_path]
+          const dynamicHref = `/s/${urlKey || 'session'}${item.href}`;
+          const isActive = pathname === dynamicHref || (!isRoot && pathname.startsWith(dynamicHref + '/'));
           
           let count = 0;
           if (item.label === 'Quotations') count = pendingQuotes;
@@ -147,7 +149,7 @@ export default function Sidebar({ role, name }: SidebarProps) {
           return (
             <Link 
               key={item.href} 
-              href={item.href} 
+              href={dynamicHref} 
               onClick={async () => {
                 if (role === 'inventory_manager' && item.label === 'Quotations' && pendingQuotes > 0) {
                   // Mark all unread reactions as read

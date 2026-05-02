@@ -11,7 +11,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <div className="lightning-shield"></div>
       <div className="lightning-strike-layer"></div>
-      <Sidebar role={session.role} name={session.name} />
+      <Sidebar role={session.role} name={session.name} urlKey={session.urlKey} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar */}
         <header style={{

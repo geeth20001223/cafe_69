@@ -21,13 +21,14 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Login failed'); return; }
       const role = data.user.role;
+      const urlKey = data.user.urlKey;
       const routes: Record<string, string> = {
-        admin: '/sys.admin',
-        inventory_manager: '/sys.inventory',
-        cashier: '/sys.terminal',
-        finance_manager: '/sys.finance',
+        admin: 'admin',
+        inventory_manager: 'inventory',
+        cashier: 'terminal',
+        finance_manager: 'finance',
       };
-      router.push(routes[role] || '/sys.admin');
+      router.push(`/s/${urlKey}/sys.${routes[role] || 'admin'}`);
     } catch {
       setError('Network error');
     } finally {
