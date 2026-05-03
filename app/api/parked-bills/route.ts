@@ -79,3 +79,22 @@ export async function DELETE(req: NextRequest) {
   
   return NextResponse.json({ success: true });
 }
+
+export async function PUT(req: NextRequest) {
+  const session = await getSessionFromRequest(req);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id, items, customer_name, customer_phone, discount_amount, notes } = await req.json();
+  if (!id || !items) return NextResponse.json({ error: 'ID and items required' }, { status: 400 });
+
+  const db = getDb();
+  try {
+    await db.execute({
+      sql: `UPDATE parked_bills SET items_json = ?, customer_name = ?, customer_phone = ?, discount_amount = ?, notes = ? WHERE id = ?`,
+      args: [JSON.stringify(items), customer_name || null, customer_phone || null, discount_amount || 0, notes || null, id]
+    });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

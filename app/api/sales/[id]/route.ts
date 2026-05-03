@@ -62,3 +62,62 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSessionFromRequest(req);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!['admin', 'cashier'].includes(session.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const { items, total_amount, discount_amount } = await req.json();
+  const db = getDb();
+
+  try {
+    // 1. Get old items to restore stock
+    const oldItemsRes = await db.execute({ sql: 'SELECT product_id, quantity FROM sale_items WHERE sale_id = ?', args: [id] });
+    const oldItems = oldItemsRes.rows;
+
+    const queries: any[] = [];
+
+    // Restore old stock
+    for (const item of oldItems as any) {
+      queries.push({
+        sql: "UPDATE products SET quantity = quantity + ? WHERE id = ?",
+        args: [item.quantity, item.product_id]
+      });
+    }
+
+    // Delete old items
+    queries.push({ sql: 'DELETE FROM sale_items WHERE sale_id = ?', args: [id] });
+
+    // Deduct new stock
+    for (const item of items) {
+      queries.push({
+        sql: "UPDATE products SET quantity = quantity - ? WHERE id = ?",
+        args: [item.quantity, item.product_id]
+      });
+      // Insert new item
+      queries.push({
+        sql: 'INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, cost_price, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        args: [id, item.product_id, item.product_name, item.quantity, item.unit_price, item.cost_price || 0, item.subtotal]
+      });
+    }
+
+    // Update sale record
+    queries.push({
+      sql: 'UPDATE sales SET total_amount = ?, discount_amount = ? WHERE id = ?',
+      args: [total_amount, discount_amount, id]
+    });
+
+    await db.batch(queries, "write");
+    
+    const { touchSync } = await import('@/app/lib/db');
+    await touchSync();
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

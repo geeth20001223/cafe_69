@@ -362,78 +362,97 @@ export default function InventoryDashboardClient({ urlKey }: { urlKey: string })
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
-                {tabAlerts.map(a => (
-                  <div key={a.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    gap: '1rem', flexWrap: 'wrap',
-                    padding: '.85rem 1.1rem', borderRadius: '10px',
-                    background: cfg.bg, border: `1px solid ${cfg.border}`,
-                    borderLeft: `4px solid ${cfg.leftBar}`,
-                  }}>
-                    {/* Left: product info */}
-                    <div style={{ flex: 1, minWidth: 200 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.25rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: '.95rem' }}>{a.product_name}</span>
-                        <span style={{ fontSize: '.72rem', background: 'rgba(239,68,68,.15)', color: '#f87171', padding: '.1rem .5rem', borderRadius: '999px', fontWeight: 700 }}>
-                          LOW STOCK
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '.78rem', color: 'var(--text-muted)' }}>
-                        Stock: <strong style={{ color: 'var(--danger)' }}>{a.quantity} {a.unit}</strong>
-                        &nbsp;· Min: {a.low_stock_threshold} {a.unit}
-                        &nbsp;· {a.created_at?.slice(0, 10)}
-                      </div>
-                    </div>
-
-                    {/* Middle: restock qty */}
-                    {a.requested_qty && (
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginBottom: '.15rem' }}>REQUESTED</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: cfg.color }}>+{a.requested_qty} {a.unit}</div>
-                      </div>
-                    )}
-
-                    {/* Right: finance decision */}
-                    <div style={{ textAlign: 'right', minWidth: 160 }}>
-                      {a.approved_by_name ? (
-                        <>
-                          <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
-                            {activeTab === 'approved' ? '✅ Approved' : '❌ Rejected'} by
-                          </div>
-                          <div style={{ fontWeight: 700, fontSize: '.88rem', color: cfg.color }}>{a.approved_by_name}</div>
-                          <div style={{ fontSize: '.72rem', color: 'var(--text-muted)' }}>{a.approved_at?.slice(0, 16)}</div>
-                          {a.status === 'approved' ? (
-                            <button 
-                              className="btn btn-success btn-sm"
-                              onClick={() => completeRefill(a.id)}
-                              disabled={refillingId === a.id}
-                              style={{ fontSize: '.75rem', padding: '6px 12px', marginTop: '.5rem' }}
-                            >
-                              {refillingId === a.id ? '⏳ Updating...' : '✅ Mark as Refilled'}
-                            </button>
-                          ) : null}
-                        </>
-                      ) : activeTab === 'pending' ? (
-                        <div style={{ fontSize: '.78rem', color: '#f59e0b', fontStyle: 'italic' }}>
-                          ⏳ Awaiting finance decision
+                {tabAlerts.map(a => {
+                  const isUnreadResult = a.is_read === 0 && (a.status === 'approved' || a.status === 'rejected');
+                  return (
+                    <div 
+                      key={a.id} 
+                      onClick={() => isUnreadResult && fetch('/api/alerts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.id, markRead: true }) }).then(load)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        gap: '1rem', flexWrap: 'wrap',
+                        padding: '.85rem 1.1rem', borderRadius: '10px',
+                        background: cfg.bg, border: `1px solid ${cfg.border}`,
+                        borderLeft: `4px solid ${cfg.leftBar}`,
+                        cursor: isUnreadResult ? 'pointer' : 'default',
+                        transition: 'all 0.2s',
+                        animation: isUnreadResult ? 'alert-row-pulse 2s infinite ease-in-out' : 'none',
+                        position: 'relative'
+                      }}
+                    >
+                      {isUnreadResult && (
+                        <div style={{
+                          position: 'absolute', top: '-6px', left: '-6px',
+                          background: 'var(--danger)', width: '10px', height: '10px',
+                          borderRadius: '50%', border: '2px solid var(--bg-card)',
+                          boxShadow: '0 0 5px var(--danger)'
+                        }} />
+                      )}
+                      {/* Left: product info */}
+                      <div style={{ flex: 1, minWidth: 200 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.25rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: '.95rem' }}>{a.product_name}</span>
+                          <span style={{ fontSize: '.72rem', background: 'rgba(239,68,68,.15)', color: '#f87171', padding: '.1rem .5rem', borderRadius: '999px', fontWeight: 700 }}>
+                            LOW STOCK
+                          </span>
                         </div>
-                      ) : activeTab === 'no_request' ? (
-                        <button 
-                          onClick={() => !a.requested_qty && requestRestock(a)}
-                          disabled={submittingId === a.id || !!a.requested_qty}
-                          className={`btn ${!!a.requested_qty ? 'btn-secondary' : 'btn-primary'} btn-sm`}
-                          style={{ fontSize: '.75rem', padding: '6px 12px', minWidth: '110px' }}
-                        >
-                          {submittingId === a.id ? '⏳ Sending...' : !!a.requested_qty ? '✅ Request Sent' : '🚀 Send Request'}
-                        </button>
-                      ) : (
-                        <div style={{ fontSize: '.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                          Not yet submitted
+                        <div style={{ fontSize: '.78rem', color: 'var(--text-muted)' }}>
+                          Stock: <strong style={{ color: 'var(--danger)' }}>{a.quantity} {a.unit}</strong>
+                          &nbsp;· Min: {a.low_stock_threshold} {a.unit}
+                          &nbsp;· {a.created_at?.slice(0, 10)}
+                        </div>
+                      </div>
+
+                      {/* Middle: restock qty */}
+                      {a.requested_qty && (
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginBottom: '.15rem' }}>REQUESTED</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: cfg.color }}>+{a.requested_qty} {a.unit}</div>
                         </div>
                       )}
+
+                      {/* Right: finance decision */}
+                      <div style={{ textAlign: 'right', minWidth: 160 }}>
+                        {a.approved_by_name ? (
+                          <>
+                            <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
+                              {activeTab === 'approved' ? '✅ Approved' : '❌ Rejected'} by
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: '.88rem', color: cfg.color }}>{a.approved_by_name}</div>
+                            <div style={{ fontSize: '.72rem', color: 'var(--text-muted)' }}>{a.approved_at?.slice(0, 16)}</div>
+                            {a.status === 'approved' ? (
+                              <button 
+                                className="btn btn-success btn-sm"
+                                onClick={(e) => { e.stopPropagation(); completeRefill(a.id); }}
+                                disabled={refillingId === a.id}
+                                style={{ fontSize: '.75rem', padding: '6px 12px', marginTop: '.5rem' }}
+                              >
+                                {refillingId === a.id ? '⏳ Updating...' : '✅ Mark as Refilled'}
+                              </button>
+                            ) : null}
+                          </>
+                        ) : activeTab === 'pending' ? (
+                          <div style={{ fontSize: '.78rem', color: '#f59e0b', fontStyle: 'italic' }}>
+                            ⏳ Awaiting finance decision
+                          </div>
+                        ) : activeTab === 'no_request' ? (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); !a.requested_qty && requestRestock(a); }}
+                            disabled={submittingId === a.id || !!a.requested_qty}
+                            className={`btn ${!!a.requested_qty ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+                            style={{ fontSize: '.75rem', padding: '6px 12px', minWidth: '110px' }}
+                          >
+                            {submittingId === a.id ? '⏳ Sending...' : !!a.requested_qty ? '✅ Request Sent' : '🚀 Send Request'}
+                          </button>
+                        ) : (
+                          <div style={{ fontSize: '.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            Not yet submitted
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

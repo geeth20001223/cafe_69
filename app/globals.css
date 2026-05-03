@@ -1027,6 +1027,21 @@ tr:hover td {
   animation: notification-pulse 2s infinite ease-in-out;
 }
 
+@keyframes alert-row-pulse {
+  0% {
+    box-shadow: 0 0 0px rgba(255, 255, 255, 0);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    filter: brightness(1.1);
+  }
+  100% {
+    box-shadow: 0 0 0px rgba(255, 255, 255, 0);
+    filter: brightness(1);
+  }
+}
+
 .notification-badge {
   position: absolute;
   top: -6px;

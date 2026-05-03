@@ -25,6 +25,8 @@ export default function CashierPOS() {
   const [emailNote, setEmailNote] = useState('');
   const [queuedBills, setQueuedBills] = useState<any[]>([]);
   const [showQueue, setShowQueue] = useState(false);
+  const [kotEditData, setKotEditData] = useState<any>(null);
+  const [kotSearch, setKotSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
   const editHandled = useRef(false);
 
@@ -237,12 +239,31 @@ export default function CashierPOS() {
 
   function printKOT(bill: any) {
     const items = typeof bill.items_json === 'string' ? JSON.parse(bill.items_json) : (bill.items || []);
-    const rows = items.map((item: any) =>
-      `<tr><td style="font-size:18px;font-weight:bold">${item.product_name}</td><td style="font-size:24px;font-weight:bold;text-align:right">x ${item.quantity}</td></tr>`
+    setKotEditData({
+      ...bill,
+      items: items.map((i: any) => ({ 
+        product_id: i.product_id,
+        product_name: i.product_name,
+        quantity: i.quantity,
+        instructions: '',
+        print: true 
+      }))
+    });
+  }
+
+  function executePrintKOT(data: any) {
+    const rows = data.items.filter((i: any) => i.print).map((item: any) =>
+      `<tr>
+        <td style="font-size:18px;font-weight:bold;padding:10px 0">
+          ${item.product_name}
+          ${item.instructions ? `<div style="font-size:14px;font-weight:normal;color:#333;margin-top:4px">📝 ${item.instructions}</div>` : ''}
+        </td>
+        <td style="font-size:24px;font-weight:bold;text-align:right">x ${item.quantity}</td>
+      </tr>`
     ).join('');
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<html><head><title>KOT - ${bill.token_code || 'Order'}</title>
+    win.document.write(`<html><head><title>KOT - ${data.token_code || 'Order'}</title>
       <style>
         body{font-family:Arial,sans-serif;margin:0;padding:0.5cm;max-width:80mm}
         h1{font-size:22px;text-align:center;margin:0}
@@ -253,16 +274,69 @@ export default function CashierPOS() {
         .footer{text-align:center;font-size:12px;margin-top:20px}
       </style></head><body>
       <h1>KITCHEN ORDER</h1>
-      <div class="token">${bill.token_code || 'NEW ORDER'}</div>
+      <div class="token">${data.token_code || 'NEW ORDER'}</div>
       <p style="text-align:center">${new Date().toLocaleTimeString('en-LK')}</p>
       <hr>
       <table>${rows}</table>
       <hr>
-      ${bill.notes ? `<p><strong>Notes:</strong> ${bill.notes}</p>` : ''}
+      ${data.notes ? `<p><strong>Order Notes:</strong> ${data.notes}</p>` : ''}
       <div class="footer">Cafe 69 POS - KOT</div>
       <script>window.onload = function() { window.print(); window.close(); }</script>
       </body></html>`);
     win.document.close();
+    setKotEditData(null);
+  }
+
+  async function syncKOTToBill() {
+    if (!kotEditData) return;
+    setSubmitting(true);
+    try {
+      const items = kotEditData.items.map((i: any) => {
+        const p = products.find(prod => prod.id === i.product_id);
+        const up = p ? p.selling_price : 0;
+        return {
+          product_id: i.product_id,
+          product_name: i.product_name,
+          quantity: i.quantity,
+          unit_price: up,
+          subtotal: up * i.quantity,
+          cost_price: p?.selling_price ? p.selling_price * 0.7 : 0 // Fallback cost
+        };
+      });
+      
+      const total = items.reduce((s, i) => s + i.subtotal, 0) - (kotEditData.discount_amount || 0);
+      
+      if (kotEditData.token_code) {
+        // It's a parked bill
+        await fetch('/api/parked-bills', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            id: kotEditData.id, 
+            items,
+            customer_name: kotEditData.customer_name,
+            customer_phone: kotEditData.customer_phone,
+            discount_amount: kotEditData.discount_amount,
+            notes: kotEditData.notes
+          })
+        });
+        loadQueue();
+      } else {
+        // It's a finalized sale
+        await fetch(`/api/sales/${kotEditData.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items, total_amount: total, discount_amount: kotEditData.discount_amount })
+        });
+        // Update local lastBill if it matches
+        if (lastBill && lastBill.id === kotEditData.id) {
+          setLastBill({ ...lastBill, items, total_amount: total });
+        }
+      }
+      alert('Order/Bill updated successfully!');
+      loadProducts();
+    } catch (e) { alert('Failed to sync changes'); }
+    setSubmitting(false);
   }
 
   function printBill(bill: any) {
@@ -537,10 +611,11 @@ export default function CashierPOS() {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent)', marginBottom: '.5rem' }}><span>Total</span><span>LKR {lastBill.total_amount.toFixed(2)}</span></div>
             {lastBill.change > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.875rem', color: 'var(--success)', marginBottom: '1rem', fontWeight: 600 }}><span>Change</span><span>LKR {lastBill.change.toFixed(2)}</span></div>}
             <div style={{ textAlign: 'center', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Thank you! Visit again ☕</div>
-            <div style={{ display: 'flex', gap: '.75rem' }}>
-              <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printBill(lastBill)}>🖨️ Print</button>
-              <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} onClick={editLastBill}>✏️ Edit</button>
-              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setLastBill(null)}>New Sale</button>
+            <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" style={{ flex: 1, minWidth: '100px', justifyContent: 'center' }} onClick={() => printBill(lastBill)}>🖨️ Bill</button>
+              <button className="btn btn-secondary" style={{ flex: 1, minWidth: '100px', justifyContent: 'center', background: 'rgba(99,102,241,0.1)', color: '#818cf8' }} onClick={() => printKOT(lastBill)}>🖨️ KOT</button>
+              <button className="btn btn-danger" style={{ flex: 1, minWidth: '100px', justifyContent: 'center', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} onClick={editLastBill}>✏️ Edit</button>
+              <button className="btn btn-primary" style={{ flex: '2', minWidth: '100%', justifyContent: 'center', marginTop: '.25rem' }} onClick={() => setLastBill(null)}>New Sale</button>
             </div>
           </div>
         </div>
@@ -656,6 +731,136 @@ export default function CashierPOS() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* KOT Editor Modal */}
+      {kotEditData && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 500, maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ fontWeight: 700 }}>📝 Edit KOT</h2>
+              <button className="btn btn-secondary btn-sm" onClick={() => { setKotEditData(null); setKotSearch(''); }}>Cancel</button>
+            </div>
+
+            {/* Product Search inside KOT Editor */}
+            <div style={{ marginBottom: '1rem', position: 'relative' }}>
+              <input 
+                className="input" 
+                placeholder="➕ Add more products to KOT & Bill..." 
+                value={kotSearch}
+                onChange={e => setKotSearch(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              {kotSearch && (
+                <div style={{ 
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  borderRadius: '8px', marginTop: '4px', maxHeight: '200px', overflowY: 'auto',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                }}>
+                  {products.filter(p => p.name.toLowerCase().includes(kotSearch.toLowerCase())).map(p => (
+                    <div 
+                      key={p.id} 
+                      onClick={() => {
+                        const newItems = [...kotEditData.items];
+                        const existingIdx = newItems.findIndex(i => i.product_id === p.id);
+                        if (existingIdx >= 0) {
+                          newItems[existingIdx].quantity += 1;
+                        } else {
+                          newItems.push({ product_id: p.id, product_name: p.name, quantity: 1, instructions: '', print: true });
+                        }
+                        setKotEditData({ ...kotEditData, items: newItems });
+                        setKotSearch('');
+                      }}
+                      style={{ padding: '.6rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: '.9rem' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {p.name} <span style={{ float: 'right', color: 'var(--accent)' }}>LKR {p.selling_price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+              {kotEditData.items.map((item: any, idx: number) => (
+                <div key={idx} style={{ 
+                  background: 'var(--bg-secondary)', padding: '.75rem', borderRadius: '10px',
+                  border: item.print ? '1px solid var(--border)' : '1px solid transparent',
+                  opacity: item.print ? 1 : 0.5,
+                  transition: 'all 0.2s'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={item.print} 
+                        onChange={e => {
+                          const newItems = [...kotEditData.items];
+                          newItems[idx].print = e.target.checked;
+                          setKotEditData({ ...kotEditData, items: newItems });
+                        }}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontWeight: 600 }}>{item.product_name}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                      <button 
+                        className="btn btn-secondary btn-sm" 
+                        style={{ padding: '0 .5rem', height: '24px' }}
+                        onClick={() => {
+                          const newItems = [...kotEditData.items];
+                          newItems[idx].quantity = Math.max(0, newItems[idx].quantity - 1);
+                          setKotEditData({ ...kotEditData, items: newItems });
+                        }}
+                      >−</button>
+                      <span style={{ minWidth: '30px', textAlign: 'center', fontWeight: 700 }}>{item.quantity}</span>
+                      <button 
+                        className="btn btn-secondary btn-sm" 
+                        style={{ padding: '0 .5rem', height: '24px' }}
+                        onClick={() => {
+                          const newItems = [...kotEditData.items];
+                          newItems[idx].quantity += 1;
+                          setKotEditData({ ...kotEditData, items: newItems });
+                        }}
+                      >+</button>
+                    </div>
+                  </div>
+                  <input 
+                    className="input" 
+                    placeholder="Special instructions (e.g. No spice, extra cheese)" 
+                    style={{ fontSize: '.8rem', width: '100%', height: '32px' }}
+                    value={item.instructions}
+                    onChange={e => {
+                      const newItems = [...kotEditData.items];
+                      newItems[idx].instructions = e.target.value;
+                      setKotEditData({ ...kotEditData, items: newItems });
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '.75rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ flex: 1, justifyContent: 'center', background: 'rgba(34,197,94,0.1)', color: '#4ade80' }}
+                onClick={syncKOTToBill}
+                disabled={submitting}
+              >
+                {submitting ? '⏳ Saving...' : '💾 Sync to Bill'}
+              </button>
+              <button 
+                className="btn btn-primary" 
+                style={{ flex: 2, justifyContent: 'center', padding: '.85rem', fontWeight: 700 }}
+                onClick={() => executePrintKOT(kotEditData)}
+                disabled={!kotEditData.items.some((i: any) => i.print)}
+              >
+                🖨️ Confirm & Print KOT
+              </button>
+            </div>
           </div>
         </div>
       )}

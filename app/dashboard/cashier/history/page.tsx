@@ -24,6 +24,33 @@ export default function SalesHistoryPage() {
     if (res.ok) { const d = await res.json(); setDetail(d.sale); }
   }
 
+  function printKOT(bill: any) {
+    const now = new Date(bill.created_at || Date.now()).toLocaleString('en-LK');
+    const rows = (bill.items || []).map((item: any) =>
+      `<tr><td style="font-size:18px;font-weight:bold;padding:10px 0">${item.product_name}</td><td style="font-size:22px;font-weight:bold;text-align:right">x ${item.quantity}</td></tr>`
+    ).join('');
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<html><head><title>KOT #${bill.id}</title>
+      <style>
+        body{font-family:Arial,sans-serif;margin:0;padding:0.5cm;max-width:80mm}
+        h1{font-size:22px;text-align:center;margin-bottom:2px;border-bottom:2px solid #000;padding-bottom:5px}
+        p{text-align:center;font-size:14px;margin:5px 0;font-weight:bold}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        td{border-bottom:1px dashed #ccc}
+        .footer{text-align:center;font-size:12px;margin-top:20px;border-top:1px solid #000;padding-top:10px}
+      </style></head><body>
+      <h1>KITCHEN ORDER (KOT)</h1>
+      <p>Order #${bill.id} · ${bill.session_type}</p>
+      <p>${now}</p>
+      ${bill.customer_name ? `<p>Customer: ${bill.customer_name}</p>` : ''}
+      <hr>
+      <table><tbody>${rows}</tbody></table>
+      <div class="footer">Cafe 69 POS · Kitchen Copy</div>
+      </body></html>`);
+    win.document.close(); win.print();
+  }
+
   function printBill(bill: any) {
     const now = new Date(bill.created_at || Date.now()).toLocaleString('en-LK');
     const rows = (bill.items || []).map((item: any) =>
@@ -171,14 +198,15 @@ export default function SalesHistoryPage() {
             ))}
             {detail.discount_amount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--danger)', marginTop: '.5rem', fontSize: '.875rem' }}><span>Discount</span><span>− LKR {detail.discount_amount.toFixed(2)}</span></div>}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1rem', color: 'var(--accent)', marginTop: '.75rem' }}><span>Total</span><span>LKR {detail.total_amount.toFixed(2)}</span></div>
-            <div style={{ display: 'flex', gap: '.75rem', marginTop: '1rem' }}>
-              <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setDetail(null)}>Close</button>
-              <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} onClick={() => {
+            <div style={{ display: 'flex', gap: '.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" style={{ flex: 1, minWidth: '90px', justifyContent: 'center' }} onClick={() => setDetail(null)}>Close</button>
+              <button className="btn btn-danger" style={{ flex: 1, minWidth: '90px', justifyContent: 'center', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} onClick={() => {
                 if(window.confirm('Void this bill and return to POS for editing?')) {
                   window.location.href = `/dashboard/cashier?edit=${detail.id}`;
                 }
               }}>✏️ Edit</button>
-              <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printBill(detail)}>🖨️ Print</button>
+              <button className="btn btn-secondary" style={{ flex: 1, minWidth: '90px', justifyContent: 'center', background: 'rgba(99,102,241,0.1)', color: '#818cf8' }} onClick={() => printKOT(detail)}>🖨️ KOT</button>
+              <button className="btn btn-primary" style={{ flex: 1, minWidth: '90px', justifyContent: 'center' }} onClick={() => printBill(detail)}>🖨️ Bill</button>
             </div>
           </div>
         </div>
