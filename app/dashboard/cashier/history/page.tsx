@@ -7,6 +7,7 @@ export default function SalesHistoryPage() {
   const [dateFrom, setDateFrom] = useState(getBusinessDateString());
   const [dateTo, setDateTo] = useState(getBusinessDateString());
   const [sessionFilter, setSessionFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [detail, setDetail] = useState<any>(null);
 
   const load = async () => {
@@ -14,10 +15,11 @@ export default function SalesHistoryPage() {
     if (dateFrom) params.set('from', dateFrom);
     if (dateTo) params.set('to', dateTo);
     if (sessionFilter) params.set('session', sessionFilter);
+    if (search) params.set('search', search);
     const res = await fetch(`/api/sales?${params}`);
     if (res.ok) { const d = await res.json(); setSales(d.sales); }
   };
-  useEffect(() => { load(); }, [dateFrom, dateTo, sessionFilter]);
+  useEffect(() => { load(); }, [dateFrom, dateTo, sessionFilter, search]);
 
   async function viewDetail(id: number) {
     const res = await fetch(`/api/sales/${id}`);
@@ -122,20 +124,39 @@ export default function SalesHistoryPage() {
     <div className="fade-in">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>📜 Sales History</h1>
-        <button className="btn btn-secondary" onClick={printAllSales}>🖨️ Print Report</button>
+        <div style={{ display: 'flex', gap: '.75rem' }}>
+          <button className="btn btn-secondary" onClick={() => {
+            const parts = window.location.pathname.split('/');
+            if (parts[parts.length - 1] === 'history') parts.pop();
+            window.location.href = parts.join('/');
+          }}>◀ Back to POS</button>
+          <button className="btn btn-secondary" onClick={printAllSales}>🖨️ Print Report</button>
+        </div>
       </div>
 
-      <div className="card fade-in stagger-1" style={{ marginBottom: '1rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input className="input" type="date" style={{ flex: '0 0 150px' }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-        <span style={{ color: 'var(--text-muted)' }}>to</span>
-        <input className="input" type="date" style={{ flex: '0 0 150px' }} value={dateTo} onChange={e => setDateTo(e.target.value)} />
-        <select className="input" style={{ flex: '0 0 140px' }} value={sessionFilter} onChange={e => setSessionFilter(e.target.value)}>
-          <option value="">All Sessions</option>
-          <option value="lunch">Lunch</option>
-          <option value="night">Night</option>
-        </select>
-        <div style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--accent)' }}>
-          Total: LKR {totalRevenue.toFixed(2)} ({sales.length} sales)
+      <div className="card fade-in stagger-1" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ flex: '1 1 250px' }}>
+          <label style={{ display: 'block', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.35rem' }}>🔍 Search Customer, Mobile or Bill #</label>
+          <input className="input" style={{ width: '100%' }} placeholder="e.g. John, 077..., 1045" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.35rem' }}>From Date</label>
+          <input className="input" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.35rem' }}>To Date</label>
+          <input className="input" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.35rem' }}>Session</label>
+          <select className="input" value={sessionFilter} onChange={e => setSessionFilter(e.target.value)}>
+            <option value="">All Sessions</option>
+            <option value="lunch">Lunch</option>
+            <option value="night">Night</option>
+          </select>
+        </div>
+        <div style={{ paddingBottom: '.5rem', fontWeight: 700, color: 'var(--accent)', marginLeft: 'auto' }}>
+          LKR {totalRevenue.toFixed(2)} ({sales.length} sales)
         </div>
       </div>
 
@@ -202,7 +223,9 @@ export default function SalesHistoryPage() {
               <button className="btn btn-secondary" style={{ flex: 1, minWidth: '90px', justifyContent: 'center' }} onClick={() => setDetail(null)}>Close</button>
               <button className="btn btn-danger" style={{ flex: 1, minWidth: '90px', justifyContent: 'center', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} onClick={() => {
                 if(window.confirm('Void this bill and return to POS for editing?')) {
-                  window.location.href = `/dashboard/cashier?edit=${detail.id}`;
+                  const parts = window.location.pathname.split('/');
+                  if (parts[parts.length - 1] === 'history') parts.pop();
+                  window.location.href = parts.join('/') + `?edit=${detail.id}`;
                 }
               }}>✏️ Edit</button>
               <button className="btn btn-secondary" style={{ flex: 1, minWidth: '90px', justifyContent: 'center', background: 'rgba(99,102,241,0.1)', color: '#818cf8' }} onClick={() => printKOT(detail)}>🖨️ KOT</button>

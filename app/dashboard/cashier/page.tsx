@@ -304,7 +304,7 @@ export default function CashierPOS() {
         };
       });
       
-      const total = items.reduce((s, i) => s + i.subtotal, 0) - (kotEditData.discount_amount || 0);
+      const total = items.reduce((s: number, i: any) => s + i.subtotal, 0) - (kotEditData.discount_amount || 0);
       
       if (kotEditData.token_code) {
         // It's a parked bill
@@ -474,6 +474,10 @@ export default function CashierPOS() {
             <option value="">All Categories</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            const current = window.location.pathname;
+            window.location.href = current.endsWith('/') ? current + 'history' : current + '/history';
+          }}>📜 History</button>
           <button className="btn btn-secondary btn-sm" onClick={closeSession} title="Close current session and generate report">🔒 Close Session</button>
         </div>
 
@@ -522,7 +526,7 @@ export default function CashierPOS() {
 
       {/* Right – Cart */}
       <div className="pos-cart">
-        <h2 style={{ fontWeight: 700, fontSize: '1rem' }}>🛒 Cart ({cart.reduce((s, i) => s + i.quantity, 0)} items)</h2>
+        <h2 style={{ fontWeight: 700, fontSize: '1rem' }}>🛒 Cart ({cart.reduce((s: number, i) => s + i.quantity, 0)} items)</h2>
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {!cart.length && <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', fontSize: '.875rem' }}>Add items to start</div>}

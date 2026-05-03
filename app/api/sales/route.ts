@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const dateTo = searchParams.get('to');
   const sessionType = searchParams.get('session');
   const cashierId = searchParams.get('cashier');
+  const search = searchParams.get('search');
 
   let query = `
     SELECT s.*, u.name as cashier_name,
@@ -32,6 +33,10 @@ export async function GET(req: NextRequest) {
   if (dateFrom) { query += " AND DATE(s.created_at) >= ?"; args.push(dateFrom); }
   if (dateTo) { query += " AND DATE(s.created_at) <= ?"; args.push(dateTo); }
   if (sessionType) { query += ' AND s.session_type = ?'; args.push(sessionType); }
+  if (search) {
+    query += " AND (s.customer_name LIKE ? OR s.customer_phone LIKE ? OR s.id = ?)";
+    args.push(`%${search}%`, `%${search}%`, isNaN(Number(search)) ? -1 : Number(search));
+  }
 
   query += ' GROUP BY s.id ORDER BY s.created_at DESC';
 
