@@ -173,6 +173,11 @@ export default function SalesHistoryPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1rem', color: 'var(--accent)', marginTop: '.75rem' }}><span>Total</span><span>LKR {detail.total_amount.toFixed(2)}</span></div>
             <div style={{ display: 'flex', gap: '.75rem', marginTop: '1rem' }}>
               <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setDetail(null)}>Close</button>
+              <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} onClick={() => {
+                if(window.confirm('Void this bill and return to POS for editing?')) {
+                  window.location.href = `/dashboard/cashier?edit=${detail.id}`;
+                }
+              }}>✏️ Edit</button>
               <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printBill(detail)}>🖨️ Print</button>
             </div>
           </div>

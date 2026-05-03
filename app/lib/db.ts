@@ -25,7 +25,7 @@ export async function initSchema() {
       role TEXT NOT NULL CHECK(role IN ('admin','inventory_manager','cashier','finance_manager')),
       is_active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
-    `,
+    )`,
     `CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -110,6 +110,17 @@ export async function initSchema() {
       sent_to_finance INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
     )`,
+    `CREATE TABLE IF NOT EXISTS parked_bills (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token_code TEXT UNIQUE NOT NULL,
+      cashier_id INTEGER REFERENCES users(id),
+      customer_name TEXT,
+      customer_phone TEXT,
+      items_json TEXT NOT NULL,
+      discount_amount REAL DEFAULT 0,
+      notes TEXT,
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+    )`,
     `CREATE TABLE IF NOT EXISTS system_sync (
       id INTEGER PRIMARY KEY,
       version INTEGER DEFAULT 0,
@@ -129,6 +140,17 @@ export async function initSchema() {
   await migrateCol(`ALTER TABLE quotations ADD COLUMN is_read INTEGER DEFAULT 0`);
   await migrateCol(`ALTER TABLE sales ADD COLUMN customer_phone TEXT`);
   await migrateCol(`ALTER TABLE sales ADD COLUMN customer_name TEXT`);
+  await migrateCol(`CREATE TABLE IF NOT EXISTS parked_bills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_code TEXT UNIQUE NOT NULL,
+    cashier_id INTEGER REFERENCES users(id),
+    customer_name TEXT,
+    customer_phone TEXT,
+    items_json TEXT NOT NULL,
+    discount_amount REAL DEFAULT 0,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now', '+5 hours', '30 minutes'))
+  )`);
 
   // Seed Admin
   const adminRes = await db.execute({ sql: "SELECT id FROM users WHERE role = 'admin' LIMIT 1", args: [] });

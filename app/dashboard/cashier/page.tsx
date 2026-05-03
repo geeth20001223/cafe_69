@@ -23,7 +23,10 @@ export default function CashierPOS() {
   const [sessionReport, setSessionReport] = useState<any>(null);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
   const [emailNote, setEmailNote] = useState('');
+  const [queuedBills, setQueuedBills] = useState<any[]>([]);
+  const [showQueue, setShowQueue] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const editHandled = useRef(false);
 
   const loadProducts = useCallback(async () => {
     const params = new URLSearchParams({ status: 'active' });
@@ -33,10 +36,49 @@ export default function CashierPOS() {
     if (res.ok) { const d = await res.json(); setProducts(d.products); }
   }, [filterCat, search]);
 
+  const loadQueue = useCallback(async () => {
+    const res = await fetch('/api/parked-bills');
+    if (res.ok) { const d = await res.json(); setQueuedBills(d.bills || []); }
+  }, []);
+
   useEffect(() => { loadProducts(); }, [loadProducts]);
   useEffect(() => {
     fetch('/api/categories').then(r => r.json()).then(d => setCategories(d.categories || []));
-  }, []);
+    loadQueue();
+  }, [loadQueue]);
+
+  // Handle "Edit" from History page
+  useEffect(() => {
+    if (editHandled.current || products.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get('edit');
+    if (editId) {
+      editHandled.current = true;
+      fetch(`/api/sales/${editId}`).then(r => r.json()).then(d => {
+        if (d.sale) {
+          fetch(`/api/sales/${editId}`, { method: 'DELETE' }).then(res => {
+            if (res.ok) {
+              const bill = d.sale;
+              const newCart = bill.items.map((item: any) => {
+                const p = products.find(p => p.id === item.product_id);
+                return {
+                  product: p || { id: item.product_id, name: item.product_name, selling_price: item.unit_price, quantity: 999, unit: 'pcs' },
+                  quantity: item.quantity
+                };
+              });
+              setCart(newCart);
+              setCustomerName(bill.customer_name || '');
+              setCustomerPhone(bill.customer_phone || '');
+              setDiscount(bill.discount_amount?.toString() || '0');
+              setNotes(bill.notes || '');
+              window.history.replaceState({}, '', '/dashboard/cashier');
+              loadProducts();
+            }
+          });
+        }
+      });
+    }
+  }, [products, loadProducts]);
 
   function addToCart(product: Product) {
     if (product.quantity <= 0) return;
@@ -93,6 +135,134 @@ export default function CashierPOS() {
     setCart([]); setDiscount('0'); setCustomerName(''); setCustomerPhone(''); setCashGiven(''); setNotes('');
     loadProducts();
     setSubmitting(false);
+  }
+
+  async function editLastBill() {
+    if (!lastBill) return;
+    if (!window.confirm('Void this bill and return items to cart for editing?')) return;
+    
+    setSubmitting(true);
+    const res = await fetch(`/api/sales/${lastBill.id}`, { method: 'DELETE' });
+    const d = await res.json();
+    
+    if (!res.ok) {
+      alert(d.error || 'Failed to void bill');
+      setSubmitting(false);
+      return;
+    }
+
+    // Map bill items back to cart format
+    const newCart = lastBill.items.map((item: any) => {
+      const p = products.find(p => p.id === item.product_id);
+      return {
+        product: p || { 
+          id: item.product_id, 
+          name: item.product_name, 
+          selling_price: item.unit_price, 
+          quantity: 999, 
+          unit: item.unit || 'pcs'
+        },
+        quantity: item.quantity
+      };
+    });
+
+    setCart(newCart);
+    setCustomerName(lastBill.customer_name || '');
+    setCustomerPhone(lastBill.customer_phone || '');
+    setDiscount(lastBill.discount_amount?.toString() || '0');
+    setNotes(lastBill.notes || '');
+    setLastBill(null);
+    loadProducts(); // Refresh stock
+    setSubmitting(false);
+  }
+
+  async function parkOrder() {
+    if (!cart.length) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/parked-bills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.map(i => ({ product_id: i.product.id, quantity: i.quantity, unit_price: i.product.selling_price, product_name: i.product.name })),
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          discount_amount: parseFloat(discount) || 0,
+          notes
+        })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setCart([]); setCustomerName(''); setCustomerPhone(''); setDiscount('0'); setNotes(''); setCashGiven('');
+        loadQueue();
+        alert(`Order Parked! Token: ${d.tokenCode}`);
+      } else {
+        let errorMsg = 'Failed to park order';
+        try {
+          const d = await res.json();
+          errorMsg = d.error || errorMsg;
+        } catch (je) {
+          errorMsg = `Server Error (${res.status})`;
+        }
+        alert(errorMsg);
+      }
+    } catch (e) {
+      alert('Network error while parking order');
+    }
+    setSubmitting(false);
+  }
+
+  async function restoreQueuedOrder(qb: any) {
+    if (cart.length && !window.confirm('Current cart will be replaced. Continue?')) return;
+    
+    const items = typeof qb.items_json === 'string' ? JSON.parse(qb.items_json) : qb.items_json;
+    const newCart = items.map((item: any) => {
+      const p = products.find(p => p.id === item.product_id);
+      return {
+        product: p || { id: item.product_id, name: item.product_name, selling_price: item.unit_price, quantity: 999, unit: 'pcs' },
+        quantity: item.quantity
+      };
+    });
+    
+    setCart(newCart);
+    setCustomerName(qb.customer_name || '');
+    setCustomerPhone(qb.customer_phone || '');
+    setDiscount(qb.discount_amount?.toString() || '0');
+    setNotes(qb.notes || '');
+    
+    await fetch(`/api/parked-bills?id=${qb.id}`, { method: 'DELETE' });
+    loadQueue();
+    setShowQueue(false);
+  }
+
+  function printKOT(bill: any) {
+    const items = typeof bill.items_json === 'string' ? JSON.parse(bill.items_json) : (bill.items || []);
+    const rows = items.map((item: any) =>
+      `<tr><td style="font-size:18px;font-weight:bold">${item.product_name}</td><td style="font-size:24px;font-weight:bold;text-align:right">x ${item.quantity}</td></tr>`
+    ).join('');
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<html><head><title>KOT - ${bill.token_code || 'Order'}</title>
+      <style>
+        body{font-family:Arial,sans-serif;margin:0;padding:0.5cm;max-width:80mm}
+        h1{font-size:22px;text-align:center;margin:0}
+        .token{font-size:32px;text-align:center;font-weight:bold;margin:10px 0}
+        hr{border:none;border-top:2px solid #000;margin:10px 0}
+        table{width:100%;border-collapse:collapse}
+        td{padding:8px 0;border-bottom:1px solid #ddd}
+        .footer{text-align:center;font-size:12px;margin-top:20px}
+      </style></head><body>
+      <h1>KITCHEN ORDER</h1>
+      <div class="token">${bill.token_code || 'NEW ORDER'}</div>
+      <p style="text-align:center">${new Date().toLocaleTimeString('en-LK')}</p>
+      <hr>
+      <table>${rows}</table>
+      <hr>
+      ${bill.notes ? `<p><strong>Notes:</strong> ${bill.notes}</p>` : ''}
+      <div class="footer">Cafe 69 POS - KOT</div>
+      <script>window.onload = function() { window.print(); window.close(); }</script>
+      </body></html>`);
+    win.document.close();
   }
 
   function printBill(bill: any) {
@@ -333,6 +503,11 @@ export default function CashierPOS() {
 
           {error && <div style={{ color: 'var(--danger)', fontSize: '.8rem', background: 'rgba(239,68,68,.1)', padding: '.5rem .75rem', borderRadius: '8px' }}>{error}</div>}
 
+          <div style={{ display: 'flex', gap: '.5rem' }}>
+            <button onClick={parkOrder} disabled={submitting || !cart.length} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>📥 Park</button>
+            <button onClick={() => setShowQueue(true)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>📋 Queue ({queuedBills.length})</button>
+          </div>
+
           <button onClick={checkout} disabled={submitting || !cart.length} className="btn btn-success" style={{ width: '100%', justifyContent: 'center', padding: '.75rem', fontSize: '.95rem', fontWeight: 700 }}>
             {submitting ? '⏳ Processing…' : `✅ Checkout — LKR ${total.toFixed(2)}`}
           </button>
@@ -364,6 +539,7 @@ export default function CashierPOS() {
             <div style={{ textAlign: 'center', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Thank you! Visit again ☕</div>
             <div style={{ display: 'flex', gap: '.75rem' }}>
               <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printBill(lastBill)}>🖨️ Print</button>
+              <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }} onClick={editLastBill}>✏️ Edit</button>
               <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setLastBill(null)}>New Sale</button>
             </div>
           </div>
@@ -446,6 +622,40 @@ export default function CashierPOS() {
                 <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => printSessionReport(sessionReport)}>🖨️ Print Report</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Queue Modal */}
+      {showQueue && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowQueue(false)}>
+          <div className="modal" style={{ maxWidth: 500, maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontWeight: 700 }}>📋 Order Queue</h2>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowQueue(false)}>Close</button>
+            </div>
+
+            {!queuedBills.length ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                No parked orders in the queue
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
+                {queuedBills.map(qb => (
+                  <div key={qb.id} className="card" style={{ padding: '1rem', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent)' }}>{qb.token_code}</div>
+                      <div style={{ fontSize: '.8rem', color: 'var(--text-secondary)' }}>{qb.customer_name || 'Walk-in'} · {qb.customer_phone || '—'}</div>
+                      <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>{new Date(qb.created_at).toLocaleTimeString('en-LK')}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '.5rem' }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => printKOT(qb)}>🖨️ KOT</button>
+                      <button className="btn btn-primary btn-sm" onClick={() => restoreQueuedOrder(qb)}>Retrieve</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
