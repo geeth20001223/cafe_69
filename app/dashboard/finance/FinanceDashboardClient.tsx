@@ -30,6 +30,7 @@ function BillModal({ bill, onClose }: { bill: any; onClose: () => void }) {
       <p>${now}</p>
       <p>Cashier: ${bill.cashier_name || '—'}</p>
       ${bill.customer_name ? `<p>Customer: ${bill.customer_name}</p>` : ''}
+      ${bill.customer_phone ? `<p>Mobile: ${bill.customer_phone}</p>` : ''}
       <hr>
       <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
       <tbody>${rows}</tbody></table>
@@ -58,9 +59,10 @@ function BillModal({ bill, onClose }: { bill: any; onClose: () => void }) {
         <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '.8rem', color: 'var(--text-secondary)' }}>
           <span className={`badge badge-${bill.session_type}`}>{bill.session_type === 'lunch' ? '🌅 Lunch' : '🌙 Night'}</span>
           <span className="badge badge-pending">{bill.payment_method}</span>
-          <span style={{ color: 'var(--text-muted)' }}>{bill.created_at?.slice(0, 16)}</span>
+          <span style={{ color: 'var(--text-muted)' }}>{parseDBTime(bill.created_at).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' })}</span>
           {bill.cashier_name && <span>Cashier: <strong>{bill.cashier_name}</strong></span>}
           {bill.customer_name && <span>Customer: <strong>{bill.customer_name}</strong></span>}
+          {bill.customer_phone && <span>Mobile: <strong>{bill.customer_phone}</strong></span>}
         </div>
 
         {/* Items */}
@@ -476,6 +478,7 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
                   <th>Payment</th>
                   <th>Items</th>
                   <th>Total (LKR)</th>
+                  <th>Mobile</th>
                   <th></th>
                 </tr>
               </thead>
@@ -483,7 +486,8 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
                 {todaySales.map(s => (
                   <tr key={s.id}>
                     <td style={{ color: 'var(--text-muted)', fontWeight: 600 }}>#{s.id}</td>
-                    <td style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
+                    <td style={{ fontSize: '.75rem', color: 'var(--text-muted)', lineHeight: '1.2' }}>
+                       {parseDBTime(s.created_at).toLocaleDateString('en-LK', { month: 'short', day: 'numeric' })}<br/>
                        {parseDBTime(s.created_at).toLocaleTimeString('en-LK', { hour: '2-digit', minute: '2-digit', hour12: true })}
                     </td>
                     <td><span className={`badge badge-${s.session_type}`}>{s.session_type === 'lunch' ? '🌅 Lunch' : '🌙 Night'}</span></td>
@@ -492,6 +496,7 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
                     <td><span className="badge badge-pending">{s.payment_method}</span></td>
                     <td style={{ color: 'var(--text-muted)' }}>{s.item_count}</td>
                     <td style={{ fontWeight: 700, color: 'var(--success)' }}>{Number(s.total_amount).toFixed(2)}</td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: '.85rem' }}>{s.customer_phone || '—'}</td>
                     <td>
                       <button
                         className="btn btn-secondary btn-sm"

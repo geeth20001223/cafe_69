@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSLTime, getCurrentSession, getSLDateString, getBusinessDateString } from '@/app/lib/session';
+import { getSLTime, getCurrentSession, getSLDateString, getBusinessDateString, parseDBTime } from '@/app/lib/session';
 
 interface Product { id: number; name: string; category_name?: string; selling_price: number; quantity: number; unit: string; }
 interface CartItem { product: Product; quantity: number; }
@@ -401,15 +401,19 @@ export default function CashierPOS() {
             {sessionReport.sales.length > 0 && (
               <div className="table-wrap" style={{ marginBottom: '1rem' }}>
                 <table style={{ minWidth: '900px' }}>
-                  <thead><tr><th>#</th><th>Customer</th><th>Payment</th><th>Amount</th><th>Time</th></tr></thead>
+                  <thead><tr><th>#</th><th>Customer</th><th>Mobile</th><th>Payment</th><th>Amount</th><th>Time</th></tr></thead>
                   <tbody>
                     {sessionReport.sales.map((s: any) => (
                       <tr key={s.id}>
                         <td style={{ color: 'var(--text-muted)' }}>#{s.id}</td>
                         <td>{s.customer_name || '—'}</td>
+                        <td style={{ fontSize: '.8rem', color: 'var(--text-secondary)' }}>{s.customer_phone || '—'}</td>
                         <td><span className={`badge badge-${s.payment_method === 'cash' ? 'active' : 'pending'}`}>{s.payment_method}</span></td>
                         <td style={{ fontWeight: 600, color: 'var(--success)' }}>LKR {s.total_amount.toFixed(2)}</td>
-                        <td style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{(s.created_at || '').slice(11, 16)}</td>
+                        <td style={{ fontSize: '.75rem', color: 'var(--text-muted)', lineHeight: '1.2' }}>
+                          {parseDBTime(s.created_at).toLocaleDateString('en-LK', { month: 'short', day: 'numeric' })}<br/>
+                          {parseDBTime(s.created_at).toLocaleTimeString('en-LK', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
