@@ -293,6 +293,52 @@ export async function POST(req: NextRequest) {
   };
 
   const salesHtml = buildEmailHtml(reportObj);
+
+  // 6. Fetch Activity Logs
+  const stockEventsRes = await database.execute({
+    sql: "SELECT sa.*, p.name as product_name FROM stock_alerts sa LEFT JOIN products p ON sa.product_id = p.id WHERE (sa.created_at BETWEEN ? AND ?) OR (sa.approved_at BETWEEN ? AND ?) ORDER BY sa.created_at DESC",
+    args: [startTime, endTime, startTime, endTime]
+  });
+  const financeEventsRes = await database.execute({
+    sql: "SELECT q.*, u.name as manager_name FROM quotations q LEFT JOIN users u ON q.manager_id = u.id WHERE (q.created_at BETWEEN ? AND ?) OR (q.approved_at BETWEEN ? AND ?) ORDER BY q.created_at DESC",
+    args: [startTime, endTime, startTime, endTime]
+  });
+  
+  let activityHtml = `<div style="padding: 20px; border-top: 2px dashed #eee; margin-top: 30px; background: #fff;">
+      <h2 style="color: #1e3a8a; margin-bottom: 15px; border-bottom: 2px solid #bfdbfe; padding-bottom: 5px;">📊 Finance & Inventory Activity Log (This Session)</h2>`;
+      
+  activityHtml += `<h3 style="color: #b45309; margin-top: 20px;">📦 Inventory Events</h3>`;
+  if (stockEventsRes.rows.length > 0) {
+    activityHtml += `<ul style="list-style-type: none; padding-left: 0;">`;
+    stockEventsRes.rows.forEach((e: any) => {
+       const time = (e.created_at || '').slice(11, 16);
+       activityHtml += `<li style="padding: 10px; border-left: 3px solid #f59e0b; background: #fefce8; margin-bottom: 8px;">
+         <strong>${time}</strong> - ${e.product_name || 'System'}: ${e.message} 
+         <br/><span style="font-size:12px;color:#854d0e;">Status: <b>${String(e.status || e.alert_type).toUpperCase()}</b> ${e.requested_qty ? `| Qty: ${e.requested_qty}` : ''}</span>
+       </li>`;
+    });
+    activityHtml += `</ul>`;
+  } else {
+    activityHtml += `<p style="color: #64748b; font-style: italic;">No inventory events recorded.</p>`;
+  }
+
+  activityHtml += `<h3 style="color: #1d4ed8; margin-top: 20px;">💰 Finance Events (Quotations)</h3>`;
+  if (financeEventsRes.rows.length > 0) {
+    activityHtml += `<ul style="list-style-type: none; padding-left: 0;">`;
+    financeEventsRes.rows.forEach((e: any) => {
+       const time = (e.created_at || '').slice(11, 16);
+       let statusColor = e.status === 'approved' ? '#15803d' : e.status === 'rejected' ? '#b91c1c' : '#b45309';
+       activityHtml += `<li style="padding: 10px; border-left: 3px solid ${statusColor}; background: #f8fafc; margin-bottom: 8px;">
+         <strong>${time}</strong> - Quotation #${e.id}: <b>${e.title}</b> (Total: LKR ${e.total})
+         <br/><span style="font-size:12px;color:${statusColor};">Status: <b>${String(e.status).toUpperCase()}</b> by ${e.manager_name || 'Finance'}</span>
+       </li>`;
+    });
+    activityHtml += `</ul>`;
+  } else {
+    activityHtml += `<p style="color: #64748b; font-style: italic;">No finance events recorded.</p>`;
+  }
+  activityHtml += `</div>`;
+
   const combinedHtml = salesHtml.replace('</body></html>', `
     <div style="padding: 20px; border-top: 2px dashed #eee; margin-top: 30px;">
       <h2 style="color: #064e3b; margin-bottom: 10px;">Inventory Snapshot</h2>
@@ -302,6 +348,7 @@ export async function POST(req: NextRequest) {
         <div style="font-size: 14px; color: #991b1b;"><strong>Low Stock Alerts:</strong> ${inventoryData.summary.low_stock_count} items</div>
       </div>
     </div>
+    ${activityHtml}
   </body></html>`);
 
   try {
