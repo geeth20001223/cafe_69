@@ -19,17 +19,17 @@ export default function DashboardLayoutClient({ children, session }: Props) {
     <div className="dashboard-container">
       <div className="lightning-shield"></div>
       <div className="lightning-strike-layer"></div>
-      
+
       {/* Sidebar Container */}
       <div className={`sidebar-wrapper ${mobileOpen ? 'mobile-open' : ''}`}>
-        <Sidebar 
-          role={session.role} 
-          name={session.name} 
-          urlKey={session.urlKey} 
-          onClose={() => setMobileOpen(false)} 
+        <Sidebar
+          role={session.role}
+          name={session.name}
+          urlKey={session.urlKey}
+          onClose={() => setMobileOpen(false)}
         />
       </div>
-      
+
       {/* Mobile Overlay */}
       {mobileOpen && <div className="mobile-overlay" onClick={() => setMobileOpen(false)}></div>}
 

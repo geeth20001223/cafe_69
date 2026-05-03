@@ -15,20 +15,27 @@ export async function GET(req: NextRequest) {
   // We prioritize entries that have at least a phone number
   const query = `
     SELECT 
-      customer_name, 
-      customer_phone, 
+      customer_phone,
+      MAX(customer_name) as customer_name, 
       MAX(created_at) as last_visit,
-      COUNT(id) as total_bills,
+      COUNT(*) as total_bills,
       SUM(total_amount) as total_spent
     FROM sales 
-    WHERE customer_phone IS NOT NULL AND customer_phone != ''
+    WHERE customer_phone IS NOT NULL AND length(customer_phone) > 2
     GROUP BY customer_phone
     ORDER BY last_visit DESC
   `;
 
   try {
-    const result = await db.execute(query);
-    return NextResponse.json({ customers: result.rows });
+    const result = await db.execute({ sql: query, args: [] });
+    const customers = result.rows.map(row => ({
+      customer_name: row.customer_name || 'Customer',
+      customer_phone: row.customer_phone,
+      last_visit: row.last_visit,
+      total_bills: Number(row.total_bills || 0),
+      total_spent: Number(row.total_spent || 0)
+    }));
+    return NextResponse.json({ customers });
   } catch (error: any) {
     console.error('[Customers API] Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

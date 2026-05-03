@@ -127,6 +127,8 @@ export async function initSchema() {
   await migrateCol(`ALTER TABLE stock_alerts ADD COLUMN approved_at TEXT`);
   await migrateCol(`ALTER TABLE quotations ADD COLUMN approval_notes TEXT`);
   await migrateCol(`ALTER TABLE quotations ADD COLUMN is_read INTEGER DEFAULT 0`);
+  await migrateCol(`ALTER TABLE sales ADD COLUMN customer_phone TEXT`);
+  await migrateCol(`ALTER TABLE sales ADD COLUMN customer_name TEXT`);
 
   // Seed Admin
   const adminRes = await db.execute({ sql: "SELECT id FROM users WHERE role = 'admin' LIMIT 1", args: [] });

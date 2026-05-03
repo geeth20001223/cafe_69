@@ -291,7 +291,8 @@ body {
   overflow-x: auto;
   width: 100%;
   -ms-overflow-style: auto;
-  scrollbar-width: thin; /* Modern browsers */
+  scrollbar-width: thin;
+  /* Modern browsers */
 }
 
 .table-wrap table {
@@ -693,15 +694,32 @@ tr:hover td {
 }
 
 @keyframes lightning-strike {
-  0%, 95%, 100% { background: transparent; }
-  96% { background: rgba(255, 255, 255, 0.05); }
-  97% { background: rgba(255, 255, 255, 0.1); }
-  98% { background: transparent; }
-  99% { background: rgba(255, 255, 255, 0.08); }
+
+  0%,
+  95%,
+  100% {
+    background: transparent;
+  }
+
+  96% {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  97% {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  98% {
+    background: transparent;
+  }
+
+  99% {
+    background: rgba(255, 255, 255, 0.08);
+  }
 }
 
 .lightning-strike-layer {
-  animation: lightning-strike 10s infinite;
+  /* animation: lightning-strike 10s infinite; */
 }
 
 .sidebar-collapse-btn {
@@ -853,16 +871,48 @@ tr:hover td {
 
 /* Bell Animation & Notification Styles */
 @keyframes strobe-flicker {
-  0%, 40%, 43%, 46%, 49%, 100% { opacity: 0.15; filter: brightness(0.5); }
-  41%, 42% { opacity: 1; filter: brightness(6) drop-shadow(0 0 15px currentColor); }
-  47%, 48% { opacity: 1; filter: brightness(6) drop-shadow(0 0 15px currentColor); }
+
+  0%,
+  40%,
+  43%,
+  46%,
+  49%,
+  100% {
+    opacity: 0.15;
+    filter: brightness(0.5);
+  }
+
+  41%,
+  42% {
+    opacity: 1;
+    filter: brightness(6) drop-shadow(0 0 15px currentColor);
+  }
+
+  47%,
+  48% {
+    opacity: 1;
+    filter: brightness(6) drop-shadow(0 0 15px currentColor);
+  }
 }
 
 @keyframes scanner-sweep {
-  0% { transform: translateX(-100%); opacity: 0; }
-  20% { opacity: 0.8; }
-  80% { opacity: 0.8; }
-  100% { transform: translateX(400%); opacity: 0; }
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.8;
+  }
+
+  80% {
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateX(400%);
+    opacity: 0;
+  }
 }
 
 @keyframes bell-swing {
@@ -957,9 +1007,20 @@ tr:hover td {
 }
 
 @keyframes notification-pulse {
-  0% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.1); filter: brightness(1.8) drop-shadow(0 0 12px var(--accent)); }
-  100% { transform: scale(1); filter: brightness(1); }
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.8) drop-shadow(0 0 12px var(--accent));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
 }
 
 .animate-pulse-notification {
@@ -1010,7 +1071,7 @@ tr:hover td {
 
 .dashboard-header {
   padding: 0;
-  border-bottom: 2px solid rgba(255,255,255,0.08);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
   background: rgba(13, 13, 13, 0.9);
   backdrop-filter: blur(20px);
   display: grid;
@@ -1019,7 +1080,7 @@ tr:hover td {
   position: sticky;
   top: 0;
   z-index: 10;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
 .dashboard-main {
@@ -1144,7 +1205,7 @@ tr:hover td {
 .mobile-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   z-index: 55;
 }
@@ -1177,7 +1238,8 @@ tr:hover td {
   }
 
   .pos-cart {
-    height: 600px; /* Fixed height for cart on mobile when stacked */
+    height: 600px;
+    /* Fixed height for cart on mobile when stacked */
   }
 
   .header-left {
@@ -1194,7 +1256,7 @@ tr:hover td {
     left: 0;
     bottom: 0;
     transform: translateX(-100%);
-    box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.5);
   }
 
   .sidebar-wrapper.mobile-open {
@@ -1251,8 +1313,8 @@ tr:hover td {
   .header-right {
     display: none;
   }
-  
+
   .dashboard-header {
-     grid-template-columns: 60px 1fr;
+    grid-template-columns: 60px 1fr;
   }
 }
