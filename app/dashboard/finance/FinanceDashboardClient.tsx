@@ -376,6 +376,7 @@ export default function FinanceDashboardClient({ urlKey }: { urlKey: string }) {
           { label: 'Session Reports', href: `/s/${urlKey}/sys.finance/sessions`, icon: '🕐', color: '#8b5cf6' },
           { label: 'Price List', href: `/s/${urlKey}/sys.finance/prices`, icon: '💲', color: '#10b981' },
           { label: 'Restock Request', href: `/s/${urlKey}/sys.finance/restock`, icon: '🔁', color: '#ef4444' },
+          { label: 'Customer Contacts', href: `/s/${urlKey}/sys.finance/customers`, icon: '📱', color: '#6366f1' },
         ].map(m => (
           <Link
             key={m.label}
