@@ -85,8 +85,8 @@ async function checkAndCreateAlert(db: any, productId: number) {
     if (existingRes.rows.length === 0) {
       await db.execute({
         sql: `
-          INSERT INTO stock_alerts (product_id, alert_type, message)
-          VALUES (?, 'low_stock', ?)
+          INSERT INTO stock_alerts (product_id, alert_type, message, created_at)
+          VALUES (?, 'low_stock', ?, datetime('now', '+5 hours', '30 minutes'))
         `,
         args: [productId, `Low stock alert: "${product.name}" has ${product.quantity} ${product.unit} remaining (threshold: ${product.low_stock_threshold})`]
       });

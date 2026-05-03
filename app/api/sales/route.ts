@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
   } else if (cashierId) {
     query += ' AND s.cashier_id = ?'; args.push(cashierId);
   }
-  if (dateFrom) { query += " AND DATE(datetime(s.created_at, '+5 hours', '30 minutes', '-7 hours')) >= ?"; args.push(dateFrom); }
-  if (dateTo) { query += " AND DATE(datetime(s.created_at, '+5 hours', '30 minutes', '-7 hours')) <= ?"; args.push(dateTo); }
+  if (dateFrom) { query += " AND DATE(s.created_at) >= ?"; args.push(dateFrom); }
+  if (dateTo) { query += " AND DATE(s.created_at) <= ?"; args.push(dateTo); }
   if (sessionType) { query += ' AND s.session_type = ?'; args.push(sessionType); }
 
   query += ' GROUP BY s.id ORDER BY s.created_at DESC';
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
       // Prepare stock update
       stockUpdateQueries.push({
-        sql: "UPDATE products SET quantity = ?, updated_at = datetime('now') WHERE id = ?",
+        sql: "UPDATE products SET quantity = ?, updated_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
         args: [newQty, item.product_id]
       });
 
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     // Now execute all in a batch or sequence
     const saleResult = await db.execute({
       sql: `INSERT INTO sales (cashier_id, session_type, total_amount, discount_amount, payment_method, customer_name, customer_phone, notes, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+5 hours', '30 minutes'))`,
       args: [session.id, sessionType, total, discount, payment_method, customer_name || null, customer_phone || null, notes || null]
     });
 

@@ -111,7 +111,7 @@ export async function PUT(req: NextRequest) {
 
     await db.execute({
       sql: `UPDATE stock_alerts SET requested_qty = ?, requested_by = ?, status = 'approved',
-            approved_by = ?, approved_at = datetime('now'), is_read = 0 WHERE id = ?`,
+            approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes'), is_read = 0 WHERE id = ?`,
       args: [qty, session.id, session.id, id]
     });
 
@@ -140,7 +140,7 @@ export async function PUT(req: NextRequest) {
     if (!alert.requested_qty) return NextResponse.json({ error: 'No restock request submitted yet' }, { status: 400 });
 
     await db.execute({
-      sql: "UPDATE stock_alerts SET status = 'approved', approved_by = ?, approved_at = datetime('now'), is_read = 0 WHERE id = ?",
+      sql: "UPDATE stock_alerts SET status = 'approved', approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes'), is_read = 0 WHERE id = ?",
       args: [session.id, id]
     });
 
@@ -164,7 +164,7 @@ export async function PUT(req: NextRequest) {
   if (body.action === 'reject' && ['admin', 'finance_manager'].includes(session.role)) {
     const { id } = body;
     await db.execute({
-      sql: "UPDATE stock_alerts SET status = 'rejected', is_read = 0, approved_by = ?, approved_at = datetime('now') WHERE id = ?",
+      sql: "UPDATE stock_alerts SET status = 'rejected', is_read = 0, approved_by = ?, approved_at = datetime('now', '+5 hours', '30 minutes') WHERE id = ?",
       args: [session.id, id]
     });
     await touchSync();
