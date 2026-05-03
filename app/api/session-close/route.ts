@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
       SELECT s.*, u.name as cashier_name
       FROM sales s
       LEFT JOIN users u ON s.cashier_id = u.id
-      WHERE s.created_at BETWEEN ? AND ? 
+      WHERE datetime(s.created_at, '+5 hours', '30 minutes') BETWEEN ? AND ? 
       AND s.status = 'completed'
     `,
     args: [startTime, endTime]
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
       SELECT si.product_name, SUM(si.quantity) as qty, SUM(si.subtotal) as total
       FROM sale_items si
       JOIN sales s ON si.sale_id = s.id
-      WHERE s.created_at BETWEEN ? AND ? AND s.status = 'completed'
+      WHERE datetime(s.created_at, '+5 hours', '30 minutes') BETWEEN ? AND ? AND s.status = 'completed'
       GROUP BY si.product_name ORDER BY total DESC
     `,
     args: [startTime, endTime]
@@ -279,7 +279,7 @@ export async function POST(req: NextRequest) {
       SELECT si.product_name, SUM(si.quantity) as total_quantity, SUM(si.subtotal) as total_revenue
       FROM sale_items si
       JOIN sales s ON si.sale_id = s.id
-      WHERE s.created_at BETWEEN ? AND ? AND s.status = 'completed'
+      WHERE datetime(s.created_at, '+5 hours', '30 minutes') BETWEEN ? AND ? AND s.status = 'completed'
       GROUP BY si.product_name ORDER BY total_revenue DESC
     `,
     args: [startTime, endTime]
@@ -297,11 +297,11 @@ export async function POST(req: NextRequest) {
 
   // 6. Fetch Activity Logs for 2nd Email
   const stockEventsRes = await database.execute({
-    sql: "SELECT sa.*, p.name as product_name FROM stock_alerts sa LEFT JOIN products p ON sa.product_id = p.id WHERE (sa.created_at BETWEEN ? AND ?) OR (sa.approved_at BETWEEN ? AND ?) ORDER BY sa.created_at DESC",
+    sql: "SELECT sa.*, p.name as product_name FROM stock_alerts sa LEFT JOIN products p ON sa.product_id = p.id WHERE (datetime(sa.created_at, '+5 hours', '30 minutes') BETWEEN ? AND ?) OR (datetime(sa.approved_at, '+5 hours', '30 minutes') BETWEEN ? AND ?) ORDER BY sa.created_at DESC",
     args: [startTime, endTime, startTime, endTime]
   });
   const financeEventsRes = await database.execute({
-    sql: "SELECT q.*, u.name as manager_name FROM quotations q LEFT JOIN users u ON q.manager_id = u.id WHERE (q.created_at BETWEEN ? AND ?) OR (q.approved_at BETWEEN ? AND ?) ORDER BY q.created_at DESC",
+    sql: "SELECT q.*, u.name as manager_name FROM quotations q LEFT JOIN users u ON q.manager_id = u.id WHERE (datetime(q.created_at, '+5 hours', '30 minutes') BETWEEN ? AND ?) OR (datetime(q.approved_at, '+5 hours', '30 minutes') BETWEEN ? AND ?) ORDER BY q.created_at DESC",
     args: [startTime, endTime, startTime, endTime]
   });
   
