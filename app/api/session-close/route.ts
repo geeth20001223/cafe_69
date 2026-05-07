@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
   
   // Logical Session Range calculation
   const now = getSLTime();
-  const businessDay = date || getSLDateString(now);
+  const businessDay = date || getBusinessDateString(now);
   const sType = sessionType || getCurrentSession();
 
   let startTime, endTime;

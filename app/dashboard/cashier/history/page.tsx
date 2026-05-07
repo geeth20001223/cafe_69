@@ -4,11 +4,33 @@ import { getBusinessDateString } from '@/app/lib/session';
 
 export default function SalesHistoryPage() {
   const [sales, setSales] = useState<any[]>([]);
-  const [dateFrom, setDateFrom] = useState(getBusinessDateString());
-  const [dateTo, setDateTo] = useState(getBusinessDateString());
-  const [sessionFilter, setSessionFilter] = useState('');
-  const [search, setSearch] = useState('');
+  
+  // Persistence logic: Load from sessionStorage or defaults
+  const [dateFrom, setDateFrom] = useState(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem('history_from') || getBusinessDateString();
+    return getBusinessDateString();
+  });
+  const [dateTo, setDateTo] = useState(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem('history_to') || getBusinessDateString();
+    return getBusinessDateString();
+  });
+  const [sessionFilter, setSessionFilter] = useState(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem('history_session') || '';
+    return '';
+  });
+  const [search, setSearch] = useState(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem('history_search') || '';
+    return '';
+  });
   const [detail, setDetail] = useState<any>(null);
+
+  // Sync state to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('history_from', dateFrom);
+    sessionStorage.setItem('history_to', dateTo);
+    sessionStorage.setItem('history_session', sessionFilter);
+    sessionStorage.setItem('history_search', search);
+  }, [dateFrom, dateTo, sessionFilter, search]);
 
   const load = async () => {
     const params = new URLSearchParams();
@@ -91,7 +113,7 @@ export default function SalesHistoryPage() {
 
   function printAllSales() {
     const now = new Date().toLocaleString('en-LK');
-    const totalRevenue = sales.reduce((s, sale) => s + sale.total_amount, 0);
+    const totalRevenue = sales.filter(s => s.status !== 'voided').reduce((s, sale) => s + sale.total_amount, 0);
     const rows = sales.map(s =>
       `<tr><td>#${s.id}</td><td>${s.session_type}</td><td>${s.customer_name || '—'}</td><td>${s.payment_method}</td><td>${s.item_count} items</td><td style="text-align:right;font-weight:bold">LKR ${s.total_amount.toFixed(2)}</td><td>${(s.created_at || '').slice(0, 16)}</td></tr>`
     ).join('');
@@ -118,7 +140,7 @@ export default function SalesHistoryPage() {
     win.document.close(); win.print();
   }
 
-  const totalRevenue = sales.reduce((s, sale) => s + sale.total_amount, 0);
+  const totalRevenue = sales.filter(s => s.status !== 'voided').reduce((s, sale) => s + sale.total_amount, 0);
 
   return (
     <div className="fade-in">
@@ -183,9 +205,15 @@ export default function SalesHistoryPage() {
                   <div>{s.customer_name || '—'}</div>
                   {s.customer_phone && <div style={{ fontSize: '.7rem', color: 'var(--text-muted)' }}>📱 {s.customer_phone}</div>}
                 </td>
-                <td><span className="badge badge-pending">{s.payment_method}</span></td>
+                <td>
+                  {s.status === 'voided' ? (
+                    <span className="badge badge-rejected" style={{ fontSize: '.7rem', opacity: 0.8 }}>VOIDED</span>
+                  ) : (
+                    <span className="badge badge-pending">{s.payment_method}</span>
+                  )}
+                </td>
                 <td style={{ color: 'var(--text-muted)' }}>{s.item_count} items</td>
-                <td style={{ fontWeight: 700, color: 'var(--success)', textAlign: 'right' }}>{s.total_amount.toFixed(2)}</td>
+                <td style={{ fontWeight: 700, color: s.status === 'voided' ? 'var(--text-muted)' : 'var(--success)', textAlign: 'right', textDecoration: s.status === 'voided' ? 'line-through' : 'none' }}>{s.total_amount.toFixed(2)}</td>
                 <td style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{s.created_at?.slice(11, 16)}</td>
                 <td style={{ textAlign: 'right' }}>
                   <button className="btn btn-secondary btn-sm" onClick={() => viewDetail(s.id)}>View</button>
@@ -201,9 +229,14 @@ export default function SalesHistoryPage() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDetail(null)}>
           <div className="modal" style={{ maxWidth: 480 }}>
             <h2 style={{ fontWeight: 700, marginBottom: '1rem' }}>Sale #{detail.id}</h2>
-            <div style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginBottom: '.75rem' }}>
+            <div style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginBottom: '.75rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
               <span className={`badge badge-${detail.session_type}`}>{detail.session_type}</span>
-               &nbsp; {detail.payment_method} &nbsp; {detail.created_at?.slice(0, 16)}
+              {detail.status === 'voided' ? (
+                <span className="badge badge-rejected">VOIDED</span>
+              ) : (
+                <span className="badge badge-pending">{detail.payment_method}</span>
+              )}
+              <span style={{ color: 'var(--text-muted)' }}>{detail.created_at?.slice(0, 16)}</span>
             </div>
             {(detail.customer_name || detail.customer_phone) && (
               <div style={{ background: 'var(--bg-secondary)', padding: '.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '.85rem' }}>

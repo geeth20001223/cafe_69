@@ -49,8 +49,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       });
     }
 
-    // 2. Delete sale (items will cascade delete)
-    queries.push({ sql: 'DELETE FROM sales WHERE id = ?', args: [id] });
+    // 2. Mark sale as voided (keeps history, items remain linked)
+    queries.push({ sql: "UPDATE sales SET status = 'voided' WHERE id = ?", args: [id] });
 
     await db.batch(queries, "write");
     
