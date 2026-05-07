@@ -297,8 +297,8 @@ export async function POST(req: NextRequest) {
 
   // 6. Fetch Activity Logs for 2nd Email
   const stockEventsRes = await database.execute({
-    sql: "SELECT sa.*, p.name as product_name FROM stock_alerts sa LEFT JOIN products p ON sa.product_id = p.id WHERE (sa.created_at BETWEEN ? AND ?) OR (sa.approved_at BETWEEN ? AND ?) ORDER BY sa.created_at DESC",
-    args: [startTime, endTime, startTime, endTime]
+    sql: "SELECT sa.*, p.name as product_name FROM stock_alerts sa LEFT JOIN products p ON sa.product_id = p.id WHERE (sa.created_at BETWEEN ? AND ?) OR (sa.approved_at BETWEEN ? AND ?) OR (sa.refilled_at BETWEEN ? AND ?) ORDER BY sa.created_at DESC",
+    args: [startTime, endTime, startTime, endTime, startTime, endTime]
   });
   const financeEventsRes = await database.execute({
     sql: "SELECT q.*, u.name as manager_name FROM quotations q LEFT JOIN users u ON q.manager_id = u.id WHERE (q.created_at BETWEEN ? AND ?) OR (q.approved_at BETWEEN ? AND ?) ORDER BY q.created_at DESC",
@@ -313,11 +313,15 @@ export async function POST(req: NextRequest) {
   if (stockEventsRes.rows.length > 0) {
     activityHtml += `<ul style="list-style-type: none; padding-left: 0;">`;
     stockEventsRes.rows.forEach((e: any) => {
-       const time = (e.created_at || '').slice(11, 16);
-       activityHtml += `<li style="padding: 12px 16px; border-left: 4px solid #f59e0b; background: #fffbeb; margin-bottom: 10px; border-radius: 0 6px 6px 0;">
-         <strong style="color: #b45309;">${time}</strong> - <strong style="color: #1f2937;">${e.product_name || 'System'}</strong>: ${e.message} 
-         <br/><span style="font-size:13px;color:#854d0e; display: inline-block; margin-top: 6px;">Status: <b style="text-transform: uppercase;">${String(e.status || e.alert_type)}</b> ${e.requested_qty ? `| Qty: ${e.requested_qty}` : ''}</span>
-       </li>`;
+        const time = (e.created_at || e.refilled_at || '').slice(11, 16);
+        const color = e.status === 'refilled' ? '#059669' : e.status === 'approved' ? '#b45309' : '#d97706';
+        const border = e.status === 'refilled' ? '#10b981' : '#f59e0b';
+        const bg = e.status === 'refilled' ? '#ecfdf5' : '#fffbeb';
+        
+        activityHtml += `<li style="padding: 12px 16px; border-left: 4px solid ${border}; background: ${bg}; margin-bottom: 10px; border-radius: 0 6px 6px 0;">
+          <strong style="color: ${color};">${time}</strong> - <strong style="color: #1f2937;">${e.product_name || 'System'}</strong>: ${e.message} 
+          <br/><span style="font-size:13px;color:${color}; display: inline-block; margin-top: 6px;">Status: <b style="text-transform: uppercase;">${String(e.status || e.alert_type)}</b> ${e.requested_qty ? `| Qty: ${e.requested_qty}` : ''}</span>
+        </li>`;
     });
     activityHtml += `</ul>`;
   } else {

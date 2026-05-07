@@ -198,8 +198,8 @@ export async function PUT(req: NextRequest) {
         args: [qtyToAdd, alert.product_id]
       },
       {
-        sql: "DELETE FROM stock_alerts WHERE id = ?",
-        args: [id]
+        sql: "UPDATE stock_alerts SET status = 'refilled', refilled_at = datetime('now', '+5 hours', '30 minutes'), refilled_by = ? WHERE id = ?",
+        args: [session.id, id]
       }
     ], "write");
 
